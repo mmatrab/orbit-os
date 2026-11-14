@@ -29,6 +29,13 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+/** Reads a JSON body exactly once; on HTTP errors the message includes the server's answer. */
+async function readJson(res) {
+  const text = await res.text();
+  assert(res.ok, `HTTP ${res.status}: ${text.slice(0, 300)}`);
+  return JSON.parse(text);
+}
+
 async function get(path, init) {
   const res = await fetch(new URL(path, base), { ...init, signal: AbortSignal.timeout(30000) });
   return res;
@@ -83,16 +90,14 @@ if (offline) {
 } else {
   await check('live archive search (TRAPPIST-1)', async () => {
     const res = await get('api/v1/targets/search?q=TRAPPIST-1&limit=10');
-    assert(res.ok, `HTTP ${res.status}: ${await res.text()}`);
-    const body = await res.json();
+    const body = await readJson(res);
     assert(body.items.length > 0, 'no results');
     return `${body.totalCount} matches`;
   });
 
   await check('live archive planet record (TRAPPIST-1 e)', async () => {
     const res = await get(`api/v1/exoplanets/${encodeURIComponent('TRAPPIST-1 e')}`);
-    assert(res.ok, `HTTP ${res.status}: ${await res.text()}`);
-    const body = await res.json();
+    const body = await readJson(res);
     assert(typeof body.hostStar.raDeg === 'number', 'no host coordinates');
     assert(body.orbitalParameters.periodDays.value !== null, 'no orbital period');
     return `period ${body.orbitalParameters.periodDays.value} ${body.orbitalParameters.periodDays.unit}`;
