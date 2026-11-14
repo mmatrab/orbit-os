@@ -21,7 +21,11 @@ export const LIMIT_DIRECTION_VERIFIED = false;
 export const UNVERIFIED_LIMIT_LABEL = 'Limit — direction unverified';
 
 export function isLimit(m: ScientificMeasurement<number>): boolean {
-  return m.status === 'upper_limit' || m.status === 'lower_limit';
+  return (
+    m.status === 'upper_limit' ||
+    m.status === 'lower_limit' ||
+    m.status === 'limit_direction_unverified'
+  );
 }
 
 /**
@@ -35,7 +39,7 @@ export function formatMeasurementValue(m: ScientificMeasurement<number>): string
   if (m.errPlus !== null && m.errPlus !== undefined) {
     err = m.isSymmetricErr ? ` ± ${m.errPlus}` : ` (+${m.errPlus} / -${m.errMinus ?? '?'})`;
   }
-  if (isLimit(m) && !LIMIT_DIRECTION_VERIFIED) {
+  if (m.status === 'limit_direction_unverified' || (isLimit(m) && !LIMIT_DIRECTION_VERIFIED)) {
     return `${UNVERIFIED_LIMIT_LABEL}: ${m.value}${err}`;
   }
   const prefix = m.status === 'upper_limit' ? '< ' : m.status === 'lower_limit' ? '> ' : '';

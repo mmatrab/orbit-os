@@ -41,7 +41,7 @@ function syntheticDetail(): ExoplanetDetail {
     orbitalParameters: {
       periodDays: meas({ value: 3.5, unit: 'd', status: 'measured' }),
       semiMajorAxisAu: meas(),
-      eccentricity: meas({ value: 0.05, status: 'upper_limit' }),
+      eccentricity: meas({ value: 0.05, status: 'limit_direction_unverified', rawLimitFlag: 1, rawLimitFlagColumn: 'pl_orbeccenlim' }),
       inclinationDeg: meas(),
       transitDurationHours: meas(),
     },
@@ -54,7 +54,7 @@ describe('limit direction is not asserted while unverified', () => {
     expect(LIMIT_DIRECTION_VERIFIED).toBe(false);
   });
 
-  it.each(['upper_limit', 'lower_limit'] as const)('UI text for %s carries the label and no direction symbol', (status) => {
+  it.each(['limit_direction_unverified', 'upper_limit', 'lower_limit'] as const)('UI text for %s carries the label and no direction symbol', (status) => {
     const text = formatMeasurementValue(meas({ value: 0.05, status }));
     expect(text).toBe(`${UNVERIFIED_LIMIT_LABEL}: 0.05`);
     expect(text).not.toMatch(/[<>]/);

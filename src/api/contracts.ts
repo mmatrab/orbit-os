@@ -6,10 +6,17 @@
 /** All data is queried live from the NASA Exoplanet Archive; there is no offline or demo dataset. */
 export type DataSourceMode = 'live';
 
+/**
+ * 'limit_direction_unverified': the archive flags the value as a limit, but its documentation does
+ * not reliably say which flag value means upper or lower for pscomppars. The raw flag is kept in
+ * ScientificMeasurement.rawLimitFlag. 'upper_limit' / 'lower_limit' are reserved for when the
+ * convention is verified; the API does not emit them today.
+ */
 export type MeasurementStatus =
   | 'measured'
   | 'upper_limit'
   | 'lower_limit'
+  | 'limit_direction_unverified'
   | 'derived'
   | 'not_measured';
 
@@ -29,6 +36,10 @@ export interface ScientificMeasurement<T = number> {
   errMinus?: number | null;
   isSymmetricErr?: boolean;
   status: MeasurementStatus;
+  /** Raw NASA archive limit-flag value exactly as returned (e.g. 1 or -1); null when not reported. */
+  rawLimitFlag?: number | null;
+  /** Archive column the raw flag came from, e.g. "pl_orbeccenlim". */
+  rawLimitFlagColumn?: string;
   unavailableReason?: string;
   referenceBibcode?: string;
   referenceLabel?: string;

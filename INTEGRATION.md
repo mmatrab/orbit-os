@@ -137,8 +137,9 @@ curl -X POST http://localhost:3000/api/v1/notebook/entries \
 
 **Reading a measurement:**
 - Every value is `{value, unit, errPlus, errMinus, status, referenceLabel, referenceBibcode}`.
-- `status` is `measured`, `upper_limit`, `lower_limit`, `derived` or `not_measured`.
-- Show limits as `<` or `>` and never as plain values.
+- `status` is `measured`, `limit_direction_unverified`, `derived` or `not_measured`.
+- For limits, `rawLimitFlag` and `rawLimitFlagColumn` give the archive's flag exactly as returned. The archive does not reliably document which value means upper or lower for `pscomppars`, so the API does not claim a direction. `upper_limit` and `lower_limit` are reserved for when that is verified.
+- Never show a limit as a plain value, and do not add `<` or `>` while the direction is unverified.
 - When `planetaryParameters.massIsMsini` is true, the mass is a minimum mass (M sin i).
 
 ## Option D: mount inside an Express server (Node hosts only)
@@ -174,7 +175,7 @@ Your server must run TypeScript the same way the module does (Node.js 22.18 or l
 - **Source.** Values come live from the NASA Exoplanet Archive *Planetary Systems Composite Parameters* table (`pscomppars`). Composite values can come from different publications, so each value carries its own reference. Do not combine them as one self-consistent solution.
 - **Mass.** `pl_bmasse` is a "best mass" estimate and can be a minimum mass; the API exposes `massIsMsini` and `massProvenance`.
 - **Sky view.** The marker shows the host star's catalogue position. The planet is not visible in survey images.
-- **Limit flags (open item).** Values flagged `1` are shown as upper limits and `-1` as lower limits. The archive's documentation of this sign is inconsistent across pages, so it should be verified before scientific use.
+- **Limit flags (open item).** The archive's documentation of the flag's sign is inconsistent across pages, so the API reports `limit_direction_unverified` with the raw flag, and the UI shows "Limit — direction unverified". Once verified, the direction can be enabled.
 - **Required acknowledgments.** For the NASA Exoplanet Archive: "This research has made use of the NASA Exoplanet Archive, which is operated by the California Institute of Technology, under contract with the National Aeronautics and Space Administration under the Exoplanet Exploration Program." The sky viewer uses CDS Aladin Lite (LGPL-3.0); keep its logo visible.
 
 ## Troubleshooting
