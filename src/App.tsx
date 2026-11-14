@@ -21,6 +21,7 @@ import { ResearchNotebookPanel } from './components/ResearchNotebookPanel';
 import { SkyViewerPanel } from './components/SkyViewerPanel';
 import { TargetSearchPanel } from './components/TargetSearchPanel';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
+import { pickExample } from './utils/examplePick';
 
 const DEFAULT_TARGET = 'TRAPPIST-1 e';
 
@@ -314,7 +315,11 @@ export function App() {
             query={searchParams.q ?? ''}
             searchInputRef={searchInputRef}
             onQueryChange={(q) => setSearchParams((prev) => ({ ...prev, q }))}
-            onPickExample={(name) => setSelectedId(name)}
+            onPickExample={(name) => {
+              const next = pickExample(searchParams, name);
+              setSearchParams(next.params);
+              setSelectedId(next.selectedId);
+            }}
           />
           <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] xl:grid-cols-[340px_minmax(420px,1.25fr)_minmax(360px,1fr)] gap-4 items-start">
             <TargetSearchPanel
