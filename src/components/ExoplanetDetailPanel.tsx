@@ -7,6 +7,7 @@ import {
   ScientificMeasurement,
 } from '../api/contracts';
 import { formatDecDms, formatDeg, formatRaHms } from '../utils/coordinates';
+import { formatMeasurementValue, friendlyUnit } from '../utils/measurementFormat';
 
 interface ExoplanetDetailPanelProps {
   mode: DataSourceMode;
@@ -35,19 +36,7 @@ const MeasurementRow: React.FC<{
       );
     }
 
-    const prefix =
-      measurement.status === 'upper_limit'
-        ? '< '
-        : measurement.status === 'lower_limit'
-        ? '> '
-        : '';
-
-    let errDisplay = '';
-    if (measurement.errPlus !== null && measurement.errPlus !== undefined) {
-      errDisplay = measurement.isSymmetricErr
-        ? ` ± ${measurement.errPlus}`
-        : ` (+${measurement.errPlus} / -${measurement.errMinus ?? '?'})`;
-    }
+    const valueText = formatMeasurementValue(measurement);
 
     const statusTag =
       measurement.status === 'derived' ? (
@@ -57,11 +46,7 @@ const MeasurementRow: React.FC<{
     return (
       <div>
         <div className="font-mono tabular-nums text-slate-100">
-          <span>
-            {prefix}
-            {measurement.value}
-            {errDisplay}
-          </span>
+          <span>{valueText}</span>
           <span className="text-[11px] text-slate-400 ml-1.5">{measurement.unit}</span>
           {statusTag}
         </div>
@@ -97,6 +82,32 @@ const MeasurementRow: React.FC<{
       </th>
       <td className="py-2 text-left align-top">{renderValue()}</td>
     </tr>
+  );
+};
+
+/** One of the three headline numbers: big value, plain-language unit, its source underneath. */
+const KeyFact: React.FC<{ label: string; measurement: ScientificMeasurement<number> }> = ({
+  label,
+  measurement,
+}) => {
+  const valueText = formatMeasurementValue(measurement);
+  return (
+    <div className="p-3 rounded border border-slate-800 bg-[#07090E]">
+      <div className="text-[11px] text-slate-400">{label}</div>
+      {valueText === null ? (
+        <div className="mt-1 text-sm text-slate-500 italic">Not measured</div>
+      ) : (
+        <div className="mt-1 font-mono tabular-nums text-slate-100">
+          <span className="text-base font-semibold">{valueText}</span>{' '}
+          <span className="text-[11px] text-slate-400">{friendlyUnit(measurement.unit)}</span>
+        </div>
+      )}
+      {measurement.referenceLabel && (
+        <div className="mt-1 text-[10px] text-slate-500 truncate" title={measurement.referenceLabel}>
+          Source: {measurement.referenceLabel}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -220,7 +231,33 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
         </button>
       </div>
 
-      <div className="p-4 flex flex-col gap-5 text-xs">
+      <div className="p-4 flex flex-col gap-4 text-xs">
+        {/* Overview: the three numbers a first-time visitor needs */}
+        <div>
+          <p className="text-slate-300">
+            Orbits <span className="text-slate-100 font-medium">{target.hostStar.hostname}</span>
+            {target.discoveryMethod !== 'Not recorded' &&
+              ` · found by ${target.discoveryMethod.toLowerCase()}`}
+            {target.discoveryYear ? ` in ${target.discoveryYear}` : ''}
+          </p>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <KeyFact label="Radius" measurement={target.planetaryParameters.radiusEarth} />
+            <KeyFact
+              label={target.planetaryParameters.massIsMsini ? 'Min. mass (M sin i)' : 'Mass'}
+              measurement={target.planetaryParameters.massEarth}
+            />
+            <KeyFact label="Orbital period" measurement={target.orbitalParameters.periodDays} />
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">
+            Values from the NASA Exoplanet Archive; each comes from the publication named under it.
+          </p>
+        </div>
+
+        <details className="group rounded border border-slate-800">
+          <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-cyan-300 hover:text-cyan-200">
+            All scientific parameters (discovery, planet, orbit, host star, uncertainties, references)
+          </summary>
+          <div className="p-3 pt-1 flex flex-col gap-5">
         {/* Discovery Metadata */}
         <div className="pb-3 border-b border-slate-800 space-y-1 text-slate-300">
           <div>
@@ -382,6 +419,8 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
             </tbody>
           </table>
         </div>
+          </div>
+        </details>
       </div>
     </section>
   );
