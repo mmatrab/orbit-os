@@ -15,10 +15,15 @@ import {
 import { EvidenceExportModal } from './components/EvidenceExportModal';
 import { ExoplanetDetailPanel } from './components/ExoplanetDetailPanel';
 import { HeaderBar, WorkspaceTab } from './components/HeaderBar';
+import { IntroSearch } from './components/IntroSearch';
 import { ProvenancePanel } from './components/ProvenancePanel';
 import { ResearchNotebookPanel } from './components/ResearchNotebookPanel';
 import { SkyViewerPanel } from './components/SkyViewerPanel';
 import { TargetSearchPanel } from './components/TargetSearchPanel';
+import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
+import { pickExample } from './utils/examplePick';
+
+const DEFAULT_TARGET = 'TRAPPIST-1 e';
 
 const LOCAL_NOTEBOOK_KEY = 'orbit_os_notebook_entries_v1';
 
@@ -41,12 +46,13 @@ function makeId(): string {
 }
 
 export function App() {
-  const [mode, setMode] = useState<DataSourceMode>('live');
+  const mode: DataSourceMode = 'live';
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('explorer');
+  const launch = useMemo(() => readLaunchOptions(), []);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const client = useMemo(() => new OrbitApiClient({ mode }), [mode]);
+  const client = useMemo(() => new OrbitApiClient(), []);
 
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
@@ -63,7 +69,7 @@ export function App() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  const [selectedId, setSelectedId] = useState<string | null>('TRAPPIST-1 e');
+  const [selectedId, setSelectedId] = useState<string | null>(launch.initialTarget ?? DEFAULT_TARGET);
   const [selectedTarget, setSelectedTarget] = useState<ExoplanetDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -138,13 +144,8 @@ export function App() {
       const res = await client.searchTargets(searchParams);
       setSearchItems(res.items);
       setSearchTotal(res.totalCount);
-      setSelectedId((prevSelected) => {
-        if (res.items.length === 0) return prevSelected;
-        if (prevSelected && res.items.some((i) => i.id === prevSelected)) {
-          return prevSelected;
-        }
-        return res.items[0].id;
-      });
+      // Keep the current target (e.g. one opened by deep link) even when it is not in this result page.
+      setSelectedId((prevSelected) => prevSelected ?? res.items[0]?.id ?? null);
     } catch (err) {
       setSearchItems([]);
       setSearchTotal(0);
@@ -159,7 +160,11 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [runSearch]);
 
+  // Only the most recent selection may update the panel; a slow earlier response must not overwrite it.
+  const latestDetailRequest = useRef(0);
+
   const loadSelectedTarget = useCallback(async () => {
+    const requestNo = ++latestDetailRequest.current;
     if (!selectedId) {
       setSelectedTarget(null);
       return;
@@ -168,12 +173,14 @@ export function App() {
     setDetailError(null);
     try {
       const detail = await client.getExoplanetDetail(selectedId);
+      if (requestNo !== latestDetailRequest.current) return;
       setSelectedTarget(detail);
     } catch (err) {
+      if (requestNo !== latestDetailRequest.current) return;
       setSelectedTarget(null);
       setDetailError(err instanceof Error ? err.message : 'Failed to fetch target parameters.');
     } finally {
-      setDetailLoading(false);
+      if (requestNo === latestDetailRequest.current) setDetailLoading(false);
     }
   }, [client, selectedId]);
 
@@ -210,14 +217,20 @@ export function App() {
       });
   }, [client, mode]);
 
-  const handleChangeMode = (nextMode: DataSourceMode) => {
-    setMode(nextMode);
-    if (nextMode === 'reference_fixture') {
-      setSelectedId('trappist-1-e');
-    } else {
-      setSelectedId('TRAPPIST-1 e');
+  // Embedding bridge: announce readiness, report selections, accept host commands.
+  useEffect(() => {
+    postToHost(launch.parentOrigin, 'ready', { version: BRIDGE_VERSION });
+    return onHostSelectTarget(launch.parentOrigin, (planetName) => {
+      setSelectedId(planetName);
+      setActiveTab('explorer');
+    });
+  }, [launch.parentOrigin]);
+
+  useEffect(() => {
+    if (selectedTarget) {
+      postToHost(launch.parentOrigin, 'target-selected', { planetName: selectedTarget.planetName });
     }
-  };
+  }, [launch.parentOrigin, selectedTarget]);
 
   const handleCreateNotebookEntry = async (req: CreateNotebookEntryRequest) => {
     if (mode === 'live') {
@@ -292,12 +305,22 @@ export function App() {
         healthError={healthError}
         selectedTarget={selectedTarget}
         onSelectTab={setActiveTab}
-        onChangeMode={handleChangeMode}
         onOpenExport={() => setExportOpen(true)}
       />
 
       <main id="main-workspace" className="flex-1 p-4 lg:p-6">
         {activeTab === 'explorer' && (
+          <>
+          <IntroSearch
+            query={searchParams.q ?? ''}
+            searchInputRef={searchInputRef}
+            onQueryChange={(q) => setSearchParams((prev) => ({ ...prev, q }))}
+            onPickExample={(name) => {
+              const next = pickExample(searchParams, name);
+              setSearchParams(next.params);
+              setSelectedId(next.selectedId);
+            }}
+          />
           <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] xl:grid-cols-[340px_minmax(420px,1.25fr)_minmax(360px,1fr)] gap-4 items-start">
             <TargetSearchPanel
               mode={mode}
@@ -307,11 +330,9 @@ export function App() {
               selectedId={selectedId}
               loading={searchLoading}
               error={searchError}
-              searchInputRef={searchInputRef}
               onParamsChange={setSearchParams}
               onSelectTarget={(id) => setSelectedId(id)}
               onRetry={runSearch}
-              onSwitchToFixture={() => handleChangeMode('reference_fixture')}
             />
 
             <SkyViewerPanel target={selectedTarget} />
@@ -327,10 +348,10 @@ export function App() {
                   setActiveTab('notebook');
                 }}
                 onRetry={loadSelectedTarget}
-                onSwitchToFixture={() => handleChangeMode('reference_fixture')}
               />
             </div>
           </div>
+          </>
         )}
 
         {activeTab === 'notebook' && (

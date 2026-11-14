@@ -152,9 +152,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
           Observation &amp; Research Notebook
         </h2>
         <span className="font-mono text-[11px] text-slate-400">
-          {mode === 'reference_fixture'
-            ? 'Storage: Local Browser (Offline)'
-            : 'Storage: Backend Synced'}
+          Storage: Space Explorer server (unsynced entries stay in this browser)
         </span>
       </div>
 
@@ -399,7 +397,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
                     <div className="mt-2.5 pt-2 border-t border-slate-800/80 font-mono tabular-nums text-[11px] text-slate-400">
                       Snapshot ({entry.parameterSnapshot.capturedFromMode}): P=
                       {entry.parameterSnapshot.periodDays ?? 'null'} d · Rp=
-                      {entry.parameterSnapshot.radiusEarth ?? 'null'} R⊕ · Mp=
+                      {entry.parameterSnapshot.radiusEarth ?? 'null'} R⊕ · {entry.parameterSnapshot.massIsMsini ? 'Mp sin i' : 'Mp'}=
                       {entry.parameterSnapshot.massEarth ?? 'null'} M⊕
                     </div>
                   )}

@@ -11,11 +11,6 @@ import {
   SourcesResponse,
   UpdateNotebookEntryRequest,
 } from './contracts';
-import {
-  REFERENCE_EXOPLANET_DETAILS,
-  REFERENCE_EXOPLANET_SEARCH_ITEMS,
-  REFERENCE_SOURCES,
-} from '../data/referenceFixture';
 
 export class ApiError extends Error {
   public readonly status: number;
@@ -30,17 +25,27 @@ export class ApiError extends Error {
 }
 
 export interface OrbitClientConfig {
-  mode: DataSourceMode;
+  /**
+   * Base URL of the module, ending with "/". Defaults to the directory of the current page,
+   * so the UI works unchanged when the module is served under a prefix such as /space-explorer/.
+   */
+  baseUrl?: string;
   timeoutMs?: number;
 }
 
 export class OrbitApiClient {
-  private mode: DataSourceMode;
+  private mode: DataSourceMode = 'live';
   private timeoutMs: number;
+  private baseUrl: string;
 
-  constructor(config: OrbitClientConfig) {
-    this.mode = config.mode;
+  constructor(config: OrbitClientConfig = {}) {
     this.timeoutMs = config.timeoutMs ?? 15000;
+    this.baseUrl = config.baseUrl ?? new URL('./', document.baseURI).toString();
+  }
+
+  /** Resolves an API path such as "api/v1/health" against the module base URL. */
+  private url(relativePath: string): string {
+    return new URL(relativePath, this.baseUrl).toString();
   }
 
   public getMode(): DataSourceMode {
@@ -52,7 +57,7 @@ export class OrbitApiClient {
     const timer = window.setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const response = await fetch(path, {
+      const response = await fetch(this.url(path), {
         ...init,
         headers: {
           'Content-Type': 'application/json',
@@ -105,42 +110,10 @@ export class OrbitApiClient {
   }
 
   public async checkHealth(): Promise<HealthResponse> {
-    if (this.mode === 'reference_fixture') {
-      throw new ApiError('Demonstration fixture mode is active.', 0, '/api/v1/health');
-    }
-    return this.requestJson<HealthResponse>('/api/v1/health');
+    return this.requestJson<HealthResponse>('api/v1/health');
   }
 
   public async searchTargets(params: SearchTargetsParams): Promise<SearchTargetsResponse> {
-    if (this.mode === 'reference_fixture') {
-      const q = (params.q ?? '').trim().toLowerCase();
-      const filtered = REFERENCE_EXOPLANET_SEARCH_ITEMS.filter((item) => {
-        if (
-          params.discoveryMethod &&
-          params.discoveryMethod !== 'ALL' &&
-          item.discoveryMethod !== params.discoveryMethod
-        ) {
-          return false;
-        }
-        if (params.requireRadius && item.radiusEarth === null) return false;
-        if (params.requireMass && item.massEarth === null) return false;
-        if (!q) return true;
-        return (
-          item.planetName.toLowerCase().includes(q) ||
-          item.hostname.toLowerCase().includes(q) ||
-          item.discoveryMethod.toLowerCase().includes(q) ||
-          (item.spectralType?.toLowerCase().includes(q) ?? false)
-        );
-      });
-
-      return {
-        mode: 'reference_fixture',
-        totalCount: filtered.length,
-        returnedCount: filtered.length,
-        queryTimestampUtc: new Date().toISOString(),
-        items: filtered,
-      };
-    }
 
     const sp = new URLSearchParams();
     if (params.q?.trim()) sp.set('q', params.q.trim());
@@ -154,45 +127,27 @@ export class OrbitApiClient {
 
     const qs = sp.toString();
     return this.requestJson<SearchTargetsResponse>(
-      `/api/v1/targets/search${qs ? `?${qs}` : ''}`
+      `api/v1/targets/search${qs ? `?${qs}` : ''}`
     );
   }
 
   public async getExoplanetDetail(id: string): Promise<ExoplanetDetail> {
-    if (this.mode === 'reference_fixture') {
-      const slugKey = id.toLowerCase().replace(/\s+/g, '-');
-      const record = REFERENCE_EXOPLANET_DETAILS[id] ?? REFERENCE_EXOPLANET_DETAILS[slugKey];
-      if (!record) {
-        throw new ApiError(
-          `Target "${id}" is not included in the 3-target offline demonstration fixture.`,
-          404,
-          `/api/v1/exoplanets/${id}`
-        );
-      }
-      return record;
-    }
 
-    return this.requestJson<ExoplanetDetail>(`/api/v1/exoplanets/${encodeURIComponent(id)}`);
+    return this.requestJson<ExoplanetDetail>(`api/v1/exoplanets/${encodeURIComponent(id)}`);
   }
 
   public async getSources(): Promise<SourcesResponse> {
-    if (this.mode === 'reference_fixture') {
-      return {
-        mode: 'reference_fixture',
-        sources: REFERENCE_SOURCES,
-      };
-    }
 
-    return this.requestJson<SourcesResponse>('/api/v1/sources');
+    return this.requestJson<SourcesResponse>('api/v1/sources');
   }
 
   public async listNotebookEntries(targetId?: string): Promise<NotebookEntry[]> {
     const qs = targetId ? `?targetId=${encodeURIComponent(targetId)}` : '';
-    return this.requestJson<NotebookEntry[]>(`/api/v1/notebook/entries${qs}`);
+    return this.requestJson<NotebookEntry[]>(`api/v1/notebook/entries${qs}`);
   }
 
   public async createNotebookEntry(payload: CreateNotebookEntryRequest): Promise<NotebookEntry> {
-    return this.requestJson<NotebookEntry>('/api/v1/notebook/entries', {
+    return this.requestJson<NotebookEntry>('api/v1/notebook/entries', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -202,14 +157,14 @@ export class OrbitApiClient {
     id: string,
     payload: UpdateNotebookEntryRequest
   ): Promise<NotebookEntry> {
-    return this.requestJson<NotebookEntry>(`/api/v1/notebook/entries/${encodeURIComponent(id)}`, {
+    return this.requestJson<NotebookEntry>(`api/v1/notebook/entries/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
     });
   }
 
   public async deleteNotebookEntry(id: string): Promise<void> {
-    await this.requestJson<void>(`/api/v1/notebook/entries/${encodeURIComponent(id)}`, {
+    await this.requestJson<void>(`api/v1/notebook/entries/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
   }
@@ -217,7 +172,7 @@ export class OrbitApiClient {
   public async submitExportRecord(
     payload: ExportSubmissionRequest
   ): Promise<ExportSubmissionResponse> {
-    return this.requestJson<ExportSubmissionResponse>('/api/v1/exports', {
+    return this.requestJson<ExportSubmissionResponse>('api/v1/exports', {
       method: 'POST',
       body: JSON.stringify(payload),
     });

@@ -123,13 +123,6 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
         </div>
 
         <div className="p-4 overflow-y-auto flex flex-col gap-3 text-xs">
-          {mode === 'reference_fixture' && (
-            <div className="p-2.5 rounded border border-amber-500/35 bg-amber-950/30 text-amber-200">
-              ▲ Export is generated from the static reference fixture and includes an explicit
-              demonstration-mode watermark.
-            </div>
-          )}
-
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="inline-flex items-center gap-2 text-slate-300">
               <span>Format</span>

@@ -5,7 +5,8 @@ import {
   NotebookEntry,
   ScientificMeasurement,
 } from '../api/contracts';
-import { formatDecDms, formatRaHms } from './coordinates';
+import { formatDecDms, formatDeg, formatRaHms } from './coordinates';
+import { exportStatus, formatMeasurementValue } from './measurementFormat';
 
 export interface EvidenceBundle {
   schemaVersion: 'orbit-os.evidence.v1';
@@ -17,9 +18,14 @@ export interface EvidenceBundle {
   provenanceSources: DataSourceStatus[];
 }
 
-function escapeCsvCell(value: string | number | boolean | null | undefined): string {
+export function escapeCsvCell(value: string | number | boolean | null | undefined): string {
   if (value === null || value === undefined) return '';
-  const str = String(value);
+  let str = String(value);
+  // Spreadsheet formula injection guard for text cells. Numbers such as "-0.13" are left untouched.
+  const isNumeric = str.trim() !== '' && Number.isFinite(Number(str));
+  if (!isNumeric && /^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
   if (/[",\n\r]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -36,10 +42,7 @@ export function buildEvidenceBundle(
     schemaVersion: 'orbit-os.evidence.v1',
     generatedAtUtc: new Date().toISOString(),
     dataSourceMode: mode,
-    warningBanner:
-      mode === 'reference_fixture'
-        ? 'DEMONSTRATION MODE: Generated from static reference fixture, not a live backend archive query.'
-        : null,
+    warningBanner: null,
     target,
     notebookEntries,
     provenanceSources,
@@ -73,7 +76,7 @@ export function serializeBundleToCsv(bundle: EvidenceBundle): string {
       m.unit,
       m.errPlus !== null && m.errPlus !== undefined ? String(m.errPlus) : '',
       m.errMinus !== null && m.errMinus !== undefined ? String(m.errMinus) : '',
-      m.status,
+      exportStatus(m),
       m.referenceLabel ?? m.unavailableReason ?? '',
     ]);
   };
@@ -102,7 +105,7 @@ export function serializeBundleToCsv(bundle: EvidenceBundle): string {
   rows.push([
     'host_star',
     'ra_icrs_deg',
-    String(target.hostStar.raDeg),
+    target.hostStar.raDeg !== null ? String(target.hostStar.raDeg) : '',
     'deg',
     '',
     '',
@@ -112,7 +115,7 @@ export function serializeBundleToCsv(bundle: EvidenceBundle): string {
   rows.push([
     'host_star',
     'dec_icrs_deg',
-    String(target.hostStar.decDeg),
+    target.hostStar.decDeg !== null ? String(target.hostStar.decDeg) : '',
     'deg',
     '',
     '',
@@ -148,14 +151,8 @@ export function serializeBundleToCsv(bundle: EvidenceBundle): string {
 export function serializeBundleToMarkdown(bundle: EvidenceBundle): string {
   const { target } = bundle;
   const formatVal = (m: ScientificMeasurement<number>) => {
-    if (m.value === null) return `Not measured (${m.unavailableReason ?? 'unavailable'})`;
-    const err =
-      m.errPlus !== null && m.errPlus !== undefined
-        ? m.isSymmetricErr
-          ? ` ± ${m.errPlus}`
-          : ` (+${m.errPlus} / -${m.errMinus ?? '?'})`
-        : '';
-    return `${m.value}${err} ${m.unit}`;
+    const text = formatMeasurementValue(m);
+    return text === null ? `Not measured (${m.unavailableReason ?? 'unavailable'})` : `${text} ${m.unit}`;
   };
 
   const lines: string[] = [
@@ -166,7 +163,7 @@ export function serializeBundleToMarkdown(bundle: EvidenceBundle): string {
       bundle.warningBanner ? ` — **${bundle.warningBanner}**` : ''
     }`,
     `- **Archive Table:** ${target.archiveRecordTable}`,
-    `- **Discovery:** ${target.discoveryMethod} (${target.discoveryYear}), ${target.discoveryFacility}`,
+    `- **Discovery:** ${target.discoveryMethod} (${target.discoveryYear ?? 'year not recorded'}), ${target.discoveryFacility}`,
     `- **Primary Reference:** ${target.discoveryReference}${
       target.discoveryDoi ? ` (DOI: ${target.discoveryDoi})` : ''
     }`,
@@ -177,9 +174,9 @@ export function serializeBundleToMarkdown(bundle: EvidenceBundle): string {
     })`,
     `- **Coordinates (ICRS J2000):** \`${formatRaHms(
       target.hostStar.raDeg
-    )}\` / \`${formatDecDms(target.hostStar.decDeg)}\` (${target.hostStar.raDeg.toFixed(
-      6
-    )}°, ${target.hostStar.decDeg.toFixed(6)}°)`,
+    )}\` / \`${formatDecDms(target.hostStar.decDeg)}\` (${formatDeg(
+      target.hostStar.raDeg
+    )}, ${formatDeg(target.hostStar.decDeg)})`,
     `- **Distance:** ${formatVal(target.hostStar.distancePc)}`,
     `- **Effective Temperature:** ${formatVal(target.hostStar.teffK)}`,
     `- **Mass / Radius:** ${formatVal(target.hostStar.massSolar)} / ${formatVal(

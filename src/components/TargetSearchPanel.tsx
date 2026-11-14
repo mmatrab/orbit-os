@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { RotateCw, Search } from 'lucide-react';
+import { RotateCw } from 'lucide-react';
 import {
   DataSourceMode,
   DiscoveryMethod,
@@ -16,11 +16,9 @@ interface TargetSearchPanelProps {
   selectedId: string | null;
   loading: boolean;
   error: string | null;
-  searchInputRef?: React.RefObject<HTMLInputElement | null>;
   onParamsChange: (next: SearchTargetsParams) => void;
   onSelectTarget: (id: string) => void;
   onRetry: () => void;
-  onSwitchToFixture?: () => void;
 }
 
 const DISCOVERY_METHODS: Array<DiscoveryMethod | 'ALL'> = [
@@ -41,11 +39,9 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
   selectedId,
   loading,
   error,
-  searchInputRef,
   onParamsChange,
   onSelectTarget,
   onRetry,
-  onSwitchToFixture,
 }) => {
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -72,7 +68,7 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
     >
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
         <h2 id="search-panel-title" className="text-xs font-semibold tracking-wide text-slate-100">
-          Target Catalog Search
+          Results &amp; Filters
         </h2>
         <span className="font-mono tabular-nums text-[11px] text-slate-400" aria-live="polite">
           {loading ? 'Querying…' : `${items.length} of ${totalCount} targets`}
@@ -80,30 +76,6 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
       </div>
 
       <div className="p-4 flex flex-col gap-3">
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label htmlFor="target-query" className="text-xs font-medium text-slate-300">
-              Planet or Host Star Identifier
-            </label>
-            <span className="font-mono text-[10px] text-slate-500">Shortcut: /</span>
-          </div>
-          <div className="relative">
-            <Search
-              className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-              aria-hidden="true"
-            />
-            <input
-              ref={searchInputRef}
-              id="target-query"
-              type="search"
-              placeholder="TRAPPIST-1, Kepler-186, Proxima Cen…"
-              value={params.q ?? ''}
-              onChange={(e) => onParamsChange({ ...params, q: e.target.value })}
-              className="w-full pl-8 pr-3 py-2 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
-            />
-          </div>
-        </div>
-
         <div className="flex flex-col gap-2.5">
           <div>
             <label
@@ -196,15 +168,6 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                   <RotateCw className="w-3 h-3" aria-hidden="true" />
                   <span>Retry Live Query</span>
                 </button>
-                {mode === 'live' && onSwitchToFixture && (
-                  <button
-                    type="button"
-                    onClick={onSwitchToFixture}
-                    className="px-3 py-1.5 text-xs font-medium rounded border border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-colors cursor-pointer"
-                  >
-                    Open Demonstration Fixture
-                  </button>
-                )}
               </div>
             </div>
           )}
@@ -272,7 +235,8 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                         </span>
                         <span aria-hidden="true">·</span>
                         <span>
-                          Mp {item.massEarth !== null ? `${item.massEarth} M⊕` : 'unmeasured'}
+                          {item.massIsMsini ? 'Mp sin i' : 'Mp'}{' '}
+                          {item.massEarth !== null ? `${item.massEarth} M⊕` : 'unmeasured'}
                         </span>
                       </div>
                     </button>

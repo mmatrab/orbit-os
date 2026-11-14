@@ -1,0 +1,22 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Smoke test (offline checks; NASA is not called from CI)
+        run: |
+          NODE_ENV=production PORT=3000 ORBIT_DATA_DIR=$RUNNER_TEMP/data node server.ts &
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:3000/api/v1/health && break; sleep 1; done
+          npm run smoke -- --offline

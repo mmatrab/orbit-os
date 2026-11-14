@@ -14,7 +14,6 @@ interface HeaderBarProps {
   healthError: string | null;
   selectedTarget: ExoplanetDetail | null;
   onSelectTab: (tab: WorkspaceTab) => void;
-  onChangeMode: (mode: DataSourceMode) => void;
   onOpenExport: () => void;
 }
 
@@ -27,7 +26,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   healthError,
   selectedTarget,
   onSelectTab,
-  onChangeMode,
   onOpenExport,
 }) => {
   return (
@@ -103,29 +101,15 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       {/* Top Telemetry & Mode Ribbon */}
       <div
         role="status"
-        className={`flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 lg:px-6 py-2 text-xs ${
-          mode === 'reference_fixture'
-            ? 'bg-amber-950/30 text-amber-200 border-b border-amber-500/20'
-            : 'bg-emerald-950/25 text-emerald-200 border-b border-emerald-500/20'
-        }`}
+        className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 lg:px-6 py-2 text-xs bg-emerald-950/25 text-emerald-200 border-b border-emerald-500/20"
       >
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          {mode === 'reference_fixture' ? (
-            <span className="font-medium text-amber-300 whitespace-nowrap">
-              ▲ Demonstration Mode · Static Reference Fixture
-            </span>
-          ) : (
-            <span className="font-medium text-emerald-300 whitespace-nowrap">
-              ● Live NASA Exoplanet Archive TAP · Same-Origin /api/v1
-              {health ? ` (${health.status})` : ''}
-            </span>
-          )}
+          <span className="font-medium text-emerald-300 whitespace-nowrap">
+            ● Live NASA Exoplanet Archive (TAP, {mode})
+            {health ? ` · API ${health.status}` : ''}
+          </span>
 
-          {mode === 'reference_fixture' ? (
-            <span className="text-slate-400">
-              Showing 3 static literature targets only; live archive queries are paused
-            </span>
-          ) : healthError ? (
+          {healthError ? (
             <span className="text-rose-300">API connection warning: {healthError}</span>
           ) : null}
         </div>
@@ -153,24 +137,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 </>
               )}
             </div>
-          )}
-
-          {mode === 'reference_fixture' ? (
-            <button
-              type="button"
-              onClick={() => onChangeMode('live')}
-              className="px-2.5 py-1 text-[11px] font-medium rounded border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              Return to Live NASA API
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onChangeMode('reference_fixture')}
-              className="px-2.5 py-1 text-[11px] font-medium rounded border border-slate-700 bg-slate-800/70 text-slate-200 hover:border-slate-500 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              View Demonstration Fixture
-            </button>
           )}
         </div>
       </div>

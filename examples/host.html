@@ -1,0 +1,41 @@
+<!doctype html>
+<!--
+  Minimal host page showing Option B (web component).
+  1. Start Space Explorer with: ORBIT_FRAME_ANCESTORS="'self' http://localhost:8080"
+  2. Serve this folder: npx serve -l 8080 examples   (or any static server)
+  3. Open http://localhost:8080/host.html
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Host platform example</title>
+    <script src="http://localhost:3000/orbit-space-explorer.js" defer></script>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 24px; }
+      nav button { margin-right: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Our platform</h1>
+    <nav>
+      <button data-planet="TRAPPIST-1 e">TRAPPIST-1 e</button>
+      <button data-planet="51 Peg b">51 Peg b</button>
+      <button data-planet="Proxima Cen b">Proxima Cen b</button>
+    </nav>
+    <p id="status">Waiting for Space Explorer...</p>
+
+    <orbit-space-explorer id="explorer" target="TRAPPIST-1 e" height="900px"></orbit-space-explorer>
+
+    <script>
+      const explorer = document.getElementById('explorer');
+      const status = document.getElementById('status');
+      explorer.addEventListener('orbit-ready', () => (status.textContent = 'Space Explorer ready'));
+      explorer.addEventListener('orbit-target-selected', (e) => {
+        status.textContent = `Viewing ${e.detail.planetName}`;
+      });
+      document.querySelectorAll('nav button').forEach((button) =>
+        button.addEventListener('click', () => explorer.selectTarget(button.dataset.planet))
+      );
+    </script>
+  </body>
+</html>

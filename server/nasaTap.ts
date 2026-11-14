@@ -8,7 +8,8 @@ import type {
   SearchTargetsParams,
 } from '../src/api/contracts.ts';
 
-const NASA_TAP_URL = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync';
+export const DEFAULT_TAP_URL = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync';
+let NASA_TAP_URL = DEFAULT_TAP_URL;
 const SIMBAD_SESAME_URL =
   'https://cdsweb.u-strasbg.fr/cgi-bin/nph-sesame/-oI?TRAPPIST-1';
 const ALADIN_HIPS_PROPS_URL =
@@ -24,11 +25,33 @@ const ALLOWED_DISCOVERY_METHODS: ReadonlySet<DiscoveryMethod> = new Set([
   'Other',
 ]);
 
-const LEGACY_SLUG_TO_PL_NAME: Record<string, string> = {
-  'trappist-1-e': 'TRAPPIST-1 e',
-  'kepler-186-f': 'Kepler-186 f',
-  '51-peg-b': '51 Peg b',
-};
+// ---------------------------------------------------------------------------
+// Runtime options (set once by the server from its config)
+// ---------------------------------------------------------------------------
+
+let cacheTtlMs = 10 * 60 * 1000;
+let userAgent = 'ORBIT-OS-Space-Explorer/1.0';
+const CACHE_MAX_ENTRIES = 500;
+const tapCache = new Map<string, { expiresAt: number; rows: unknown[] }>();
+
+/** Configure caching and the User-Agent used for upstream calls. */
+export function configureNasaTap(options: {
+  cacheTtlSeconds?: number;
+  contact?: string;
+  tapUrl?: string;
+}): void {
+  if (options.cacheTtlSeconds !== undefined) cacheTtlMs = options.cacheTtlSeconds * 1000;
+  NASA_TAP_URL = options.tapUrl ?? DEFAULT_TAP_URL;
+  userAgent = options.contact
+    ? `ORBIT-OS-Space-Explorer/1.0 (${options.contact})`
+    : 'ORBIT-OS-Space-Explorer/1.0';
+  tapCache.clear();
+}
+
+/** Test helper: forget cached upstream responses. */
+export function clearTapCache(): void {
+  tapCache.clear();
+}
 
 export class UpstreamTapError extends Error {
   status: number;
@@ -42,15 +65,29 @@ export class UpstreamTapError extends Error {
   }
 }
 
-function escapeAdqlString(input: string): string {
+export function escapeAdqlString(input: string): string {
   return input.replace(/'/g, "''");
 }
 
-function normalizeDiscoveryMethod(raw: unknown): DiscoveryMethod {
-  if (typeof raw === 'string' && ALLOWED_DISCOVERY_METHODS.has(raw as DiscoveryMethod)) {
-    return raw as DiscoveryMethod;
-  }
-  return 'Other';
+/** Discovery method exactly as published; never collapsed into a coarser category. */
+function discoveryMethodText(raw: unknown): string {
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : 'Not recorded';
+}
+
+export type MassProvenanceKind = 'mass' | 'msini' | 'msini_over_sini' | 'other' | 'unknown';
+
+/**
+ * Classifies the archive's pl_bmassprov text. The archive documents the values
+ * "Mass", "M*sin(i)/sin(i)" and "M*sini"; comparison ignores case and punctuation
+ * so "Msini" and "M*sini" are treated alike.
+ */
+export function classifyMassProvenance(raw: unknown): MassProvenanceKind {
+  if (typeof raw !== 'string' || !raw.trim()) return 'unknown';
+  const key = raw.toLowerCase().replace(/[^a-z]/g, '');
+  if (key === 'mass') return 'mass';
+  if (key === 'msini') return 'msini';
+  if (key === 'msinisini') return 'msini_over_sini';
+  return 'other';
 }
 
 interface ParsedRefLink {
@@ -98,7 +135,7 @@ function decodeHtmlEntities(text: string): string {
  * Parses NASA Exoplanet Archive HTML reflink strings such as:
  * <a refstr=AGOL_ET_AL__2021 href=https://ui.adsabs.harvard.edu/abs/2021PSJ.....2....1A/abstract target=ref>Agol et al. 2021</a>
  */
-function parseRefLink(raw: unknown): ParsedRefLink {
+export function parseRefLink(raw: unknown): ParsedRefLink {
   if (typeof raw !== 'string' || !raw.trim()) return {};
   const labelMatch = raw.match(/>([^<]+)<\/a>/i);
   const rawLabel = labelMatch ? labelMatch[1] : raw.replace(/<[^>]+>/g, '');
@@ -111,7 +148,7 @@ function parseRefLink(raw: unknown): ParsedRefLink {
   };
 }
 
-function toFiniteNumber(val: unknown): number | null {
+export function toFiniteNumber(val: unknown): number | null {
   if (typeof val === 'number' && Number.isFinite(val)) return val;
   if (typeof val === 'string' && val.trim() !== '') {
     const n = Number(val);
@@ -120,7 +157,7 @@ function toFiniteNumber(val: unknown): number | null {
   return null;
 }
 
-function buildMeasurement(
+export function buildMeasurement(
   row: Record<string, unknown>,
   valueCol: string,
   unit: string,
@@ -184,6 +221,11 @@ async function runTapQuery<T = Record<string, unknown>>(
   adql: string,
   timeoutMs = 15000
 ): Promise<T[]> {
+  const cached = tapCache.get(adql);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.rows as T[];
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -192,7 +234,7 @@ async function runTapQuery<T = Record<string, unknown>>(
     const res = await fetch(url, {
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'ORBIT-OS-Space-Explorer/1.0',
+        'User-Agent': userAgent,
       },
       signal: controller.signal,
     });
@@ -213,6 +255,13 @@ async function runTapQuery<T = Record<string, unknown>>(
         502
       );
     }
+    if (cacheTtlMs > 0) {
+      if (tapCache.size >= CACHE_MAX_ENTRIES) {
+        const oldestKey = tapCache.keys().next().value;
+        if (oldestKey !== undefined) tapCache.delete(oldestKey);
+      }
+      tapCache.set(adql, { expiresAt: Date.now() + cacheTtlMs, rows: json });
+    }
     return json as T[];
   } catch (err) {
     if (err instanceof UpstreamTapError) throw err;
@@ -223,8 +272,9 @@ async function runTapQuery<T = Record<string, unknown>>(
       );
     }
     throw new UpstreamTapError(
-      err instanceof Error ? err.message : 'Network error reaching NASA Exoplanet Archive TAP.',
-      502
+      'Could not reach the NASA Exoplanet Archive TAP service.',
+      502,
+      err instanceof Error ? err.message : ''
     );
   } finally {
     clearTimeout(timer);
@@ -272,7 +322,7 @@ export async function searchNasaExoplanets(
   const dataSql = `
     SELECT TOP ${fetchTop}
       pl_name, hostname, discoverymethod, disc_year,
-      ra, dec, pl_orbper, pl_rade, pl_bmasse, sy_dist, st_spectype
+      ra, dec, pl_orbper, pl_rade, pl_bmasse, pl_bmassprov, sy_dist, st_spectype
     FROM pscomppars
     ${whereSql}
     ORDER BY sy_dist ASC NULLS LAST, pl_name ASC
@@ -290,16 +340,16 @@ export async function searchNasaExoplanets(
     id: String(r.pl_name ?? ''),
     planetName: String(r.pl_name ?? ''),
     hostname: String(r.hostname ?? ''),
-    discoveryMethod: normalizeDiscoveryMethod(r.discoverymethod),
-    discoveryYear: toFiniteNumber(r.disc_year) ?? 0,
-    raDeg: toFiniteNumber(r.ra) ?? 0,
-    decDeg: toFiniteNumber(r.dec) ?? 0,
+    discoveryMethod: discoveryMethodText(r.discoverymethod),
+    discoveryYear: toFiniteNumber(r.disc_year),
+    raDeg: toFiniteNumber(r.ra),
+    decDeg: toFiniteNumber(r.dec),
     orbitalPeriodDays: toFiniteNumber(r.pl_orbper),
     radiusEarth: toFiniteNumber(r.pl_rade),
     massEarth: toFiniteNumber(r.pl_bmasse),
+    massIsMsini: classifyMassProvenance(r.pl_bmassprov) === 'msini',
     distancePc: toFiniteNumber(r.sy_dist),
     spectralType: typeof r.st_spectype === 'string' && r.st_spectype.trim() ? r.st_spectype.trim() : null,
-    isDefaultParameterSet: true,
   }));
 
   return {
@@ -310,7 +360,7 @@ export async function searchNasaExoplanets(
 }
 
 export async function getNasaExoplanetDetail(rawId: string): Promise<ExoplanetDetail | null> {
-  const canonicalName = LEGACY_SLUG_TO_PL_NAME[rawId] ?? rawId.trim();
+  const canonicalName = rawId.trim();
   if (!canonicalName || canonicalName.length > 120) {
     throw new UpstreamTapError('Invalid exoplanet identifier.', 400);
   }
@@ -345,8 +395,10 @@ export async function getNasaExoplanetDetail(rawId: string): Promise<ExoplanetDe
   const row = rows[0];
   const discRef = parseRefLink(row.disc_refname);
   const bmassProv = typeof row.pl_bmassprov === 'string' ? row.pl_bmassprov.trim() : '';
-  const massIsMsini = bmassProv.toLowerCase() === 'msini';
-  const massIsDerived = bmassProv.toLowerCase().includes('relationship');
+  const massKind = classifyMassProvenance(bmassProv);
+  const massIsMsini = massKind === 'msini';
+  // Anything other than a direct mass or M*sin(i) (e.g. a mass-radius relationship estimate) is flagged as derived.
+  const massIsDerived = massKind === 'other';
 
   const plName = String(row.pl_name ?? canonicalName);
   const upstreamQueryUrl = `${NASA_TAP_URL}?query=${encodeURIComponent(
@@ -358,8 +410,8 @@ export async function getNasaExoplanetDetail(rawId: string): Promise<ExoplanetDe
     planetName: plName,
     archiveRecordTable: 'pscomppars (NASA Exoplanet Archive)',
     retrievedAtUtc: new Date().toISOString(),
-    discoveryMethod: normalizeDiscoveryMethod(row.discoverymethod),
-    discoveryYear: toFiniteNumber(row.disc_year) ?? 0,
+    discoveryMethod: discoveryMethodText(row.discoverymethod),
+    discoveryYear: toFiniteNumber(row.disc_year),
     discoveryFacility:
       typeof row.disc_facility === 'string' && row.disc_facility.trim()
         ? row.disc_facility.trim()
@@ -368,8 +420,8 @@ export async function getNasaExoplanetDetail(rawId: string): Promise<ExoplanetDe
     discoveryDoi: null,
     hostStar: {
       hostname: String(row.hostname ?? ''),
-      raDeg: toFiniteNumber(row.ra) ?? 0,
-      decDeg: toFiniteNumber(row.dec) ?? 0,
+      raDeg: toFiniteNumber(row.ra),
+      decDeg: toFiniteNumber(row.dec),
       spectralType:
         typeof row.st_spectype === 'string' && row.st_spectype.trim()
           ? row.st_spectype.trim()
@@ -433,6 +485,7 @@ export async function getNasaExoplanetDetail(rawId: string): Promise<ExoplanetDe
         noteSuffix: bmassProv || undefined,
       }),
       massIsMsini,
+      massProvenance: bmassProv || null,
       equilibriumTempK: buildMeasurement(row, 'pl_eqt', 'K', {
         err1Col: 'pl_eqterr1',
         err2Col: 'pl_eqterr2',
@@ -488,7 +541,9 @@ export async function getNasaExoplanetDetail(rawId: string): Promise<ExoplanetDe
       primarySourceId: 'nasa-exoplanet-archive',
       upstreamQueryUrl,
       notes:
-        'Live query from NASA Exoplanet Archive Composite Parameters (pscomppars). Null parameters reflect unmeasured or unreported archive columns.',
+        'Live query of the NASA Exoplanet Archive Planetary Systems Composite Parameters table (pscomppars). ' +
+        'Composite values can come from different publications, so each value carries its own reference; ' +
+        'do not combine them as if they were one self-consistent solution. Null parameters were not reported in the archive.',
     },
   };
 }
@@ -504,7 +559,7 @@ async function probeEndpoint(
 
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'ORBIT-OS-Space-Explorer/1.0' },
+      headers: { 'User-Agent': userAgent },
       signal: controller.signal,
     });
     const latencyMs = Math.round(performance.now() - start);
