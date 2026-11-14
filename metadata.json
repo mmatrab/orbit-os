@@ -1,6 +1,6 @@
 {
   "name": "ORBIT OS — Space Explorer",
-  "description": "Scientifically credible astronomical research and exoplanet exploration console featuring an Aladin Lite sky viewer, typed NASA Exoplanet Archive contracts, observation notebook, provenance tracking, and evidence export.",
+  "description": "Exoplanet research module: search the NASA Exoplanet Archive, inspect published parameters with references, view host stars in Aladin Lite, keep notes and export evidence.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

@@ -20,7 +20,6 @@ interface TargetSearchPanelProps {
   onParamsChange: (next: SearchTargetsParams) => void;
   onSelectTarget: (id: string) => void;
   onRetry: () => void;
-  onSwitchToFixture?: () => void;
 }
 
 const DISCOVERY_METHODS: Array<DiscoveryMethod | 'ALL'> = [
@@ -45,7 +44,6 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
   onParamsChange,
   onSelectTarget,
   onRetry,
-  onSwitchToFixture,
 }) => {
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -196,15 +194,6 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                   <RotateCw className="w-3 h-3" aria-hidden="true" />
                   <span>Retry Live Query</span>
                 </button>
-                {mode === 'live' && onSwitchToFixture && (
-                  <button
-                    type="button"
-                    onClick={onSwitchToFixture}
-                    className="px-3 py-1.5 text-xs font-medium rounded border border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-colors cursor-pointer"
-                  >
-                    Open Demonstration Fixture
-                  </button>
-                )}
               </div>
             </div>
           )}
@@ -272,7 +261,8 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                         </span>
                         <span aria-hidden="true">·</span>
                         <span>
-                          Mp {item.massEarth !== null ? `${item.massEarth} M⊕` : 'unmeasured'}
+                          {item.massIsMsini ? 'Mp sin i' : 'Mp'}{' '}
+                          {item.massEarth !== null ? `${item.massEarth} M⊕` : 'unmeasured'}
                         </span>
                       </div>
                     </button>

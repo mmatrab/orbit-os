@@ -1,8 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import A, { AladinCatalog, AladinInstance } from 'aladin-lite';
+import type { AladinCatalog, AladinInstance, AladinLiteModule } from 'aladin-lite';
+
+// Aladin Lite (LGPL-3.0) is loaded on demand as its own unmodified chunk: smaller initial
+// bundle, and the library stays separable from the application code.
+let aladinModule: Promise<AladinLiteModule> | null = null;
+function loadAladin(): Promise<AladinLiteModule> {
+  aladinModule ??= import('aladin-lite').then((m) => m.default);
+  return aladinModule;
+}
 import { Crosshair, RotateCw } from 'lucide-react';
 import { ExoplanetDetail } from '../api/contracts';
-import { formatDecDms, formatRaHms } from '../utils/coordinates';
+import { formatDecDms, formatDeg, formatRaHms } from '../utils/coordinates';
 
 interface SkyViewerPanelProps {
   target: ExoplanetDetail | null;
@@ -21,6 +29,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const aladinRef = useRef<AladinInstance | null>(null);
   const catalogRef = useRef<AladinCatalog | null>(null);
+  const libRef = useRef<AladinLiteModule | null>(null);
   const mountedSurveyRef = useRef<string>(HIPS_SURVEYS[0].id);
 
   const [viewerStatus, setViewerStatus] = useState<'initializing' | 'ready' | 'error'>(
@@ -47,7 +56,9 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         setViewerStatus('initializing');
         setViewerError(null);
         setSurveyWarning(null);
+        const A = await loadAladin();
         await A.init;
+        libRef.current = A;
         if (cancelled || !hostEl) return;
 
         hostEl.innerHTML = '';
@@ -115,6 +126,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     if (!aladin || viewerStatus !== 'ready' || !target) return;
 
     const { raDeg, decDeg, hostname, spectralType } = target.hostStar;
+    // Never point the viewer at an invented position when the archive has no coordinates.
+    if (raDeg === null || decDeg === null) return;
     try {
       aladin.gotoRaDec(raDeg, decDeg);
       aladin.setFoV(fovDeg);
@@ -126,7 +139,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
           catalog.removeAll();
         }
         catalog.addSources([
-          A.source(raDeg, decDeg, {
+          libRef.current!.source(raDeg, decDeg, {
             name: hostname,
             planet: target.planetName,
             spectralType: spectralType ?? 'Unknown',
@@ -175,6 +188,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
 
   const handleRecenter = () => {
     if (!aladinRef.current || !target) return;
+    if (target.hostStar.raDeg === null || target.hostStar.decDeg === null) return;
     aladinRef.current.gotoRaDec(target.hostStar.raDeg, target.hostStar.decDeg);
     aladinRef.current.setFoV(fovDeg);
   };
@@ -318,8 +332,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
             </div>
             {target && (
               <div className="font-mono tabular-nums text-[11px] text-slate-300">
-                Target coordinates: {target.hostStar.hostname} ({target.hostStar.raDeg.toFixed(6)}
-                °, {target.hostStar.decDeg.toFixed(6)}°)
+                Target coordinates: {target.hostStar.hostname} ({formatDeg(target.hostStar.raDeg)},{' '}
+                {formatDeg(target.hostStar.decDeg)})
               </div>
             )}
             <div>
@@ -356,13 +370,18 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
           <span className="font-mono tabular-nums">
             {target
-              ? `Center: ${target.hostStar.hostname} (${target.hostStar.raDeg.toFixed(
-                  6
-                )}°, ${target.hostStar.decDeg.toFixed(6)}°)`
+              ? `Center: ${target.hostStar.hostname} (${formatDeg(
+                  target.hostStar.raDeg
+                )}, ${formatDeg(target.hostStar.decDeg)})`
               : 'Center: None selected'}
           </span>
           <span>Powered by CDS Aladin Lite v3 (IVOA HiPS)</span>
         </div>
+        <p className="text-[11px] text-slate-500 leading-snug">
+          The marker is the host star&apos;s catalogue position from the archive. The planet itself is
+          not visible in survey images, and images taken at older epochs can show high-proper-motion
+          stars offset from the marker.
+        </p>
       </div>
     </section>
   );

@@ -6,7 +6,7 @@ import {
   ParameterSnapshot,
   ScientificMeasurement,
 } from '../api/contracts';
-import { formatDecDms, formatRaHms } from '../utils/coordinates';
+import { formatDecDms, formatDeg, formatRaHms } from '../utils/coordinates';
 
 interface ExoplanetDetailPanelProps {
   mode: DataSourceMode;
@@ -15,7 +15,6 @@ interface ExoplanetDetailPanelProps {
   error: string | null;
   onPinToNotebook: (snapshot: ParameterSnapshot) => void;
   onRetry: () => void;
-  onSwitchToFixture?: () => void;
 }
 
 const MeasurementRow: React.FC<{
@@ -108,7 +107,6 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
   error,
   onPinToNotebook,
   onRetry,
-  onSwitchToFixture,
 }) => {
   if (error) {
     return (
@@ -139,15 +137,6 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
                 <RotateCw className="w-3 h-3" aria-hidden="true" />
                 <span>Retry Target Fetch</span>
               </button>
-              {mode === 'live' && onSwitchToFixture && (
-                <button
-                  type="button"
-                  onClick={onSwitchToFixture}
-                  className="px-3 py-1.5 text-xs font-medium rounded border border-amber-500/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-colors cursor-pointer"
-                >
-                  Open Demonstration Fixture
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -207,9 +196,8 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
       periodDays: target.orbitalParameters.periodDays.value,
       radiusEarth: target.planetaryParameters.radiusEarth.value,
       massEarth: target.planetaryParameters.massEarth.value,
-      capturedFromMode: target.archiveRecordTable.startsWith('REFERENCE_FIXTURE')
-        ? 'reference_fixture'
-        : 'live',
+      massIsMsini: target.planetaryParameters.massIsMsini,
+      capturedFromMode: 'live',
     });
   };
 
@@ -262,6 +250,10 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
               {target.archiveRecordTable}
             </span>
           </div>
+          <p className="text-[11px] text-slate-500 leading-snug">
+            Composite values: each parameter may come from a different publication (see its
+            reference). Do not combine them as one self-consistent solution.
+          </p>
         </div>
 
         {/* Planetary Parameters */}
@@ -277,6 +269,8 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
                 label={
                   target.planetaryParameters.massIsMsini
                     ? 'Minimum Mass (Mp sin i)'
+                    : target.planetaryParameters.massProvenance
+                    ? `Planet Mass (${target.planetaryParameters.massProvenance})`
                     : 'Planet Mass (Mp)'
                 }
                 measurement={target.planetaryParameters.massEarth}
@@ -345,7 +339,7 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
                     {formatRaHms(target.hostStar.raDeg)} / {formatDecDms(target.hostStar.decDeg)}
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
-                    {target.hostStar.raDeg.toFixed(6)}°, {target.hostStar.decDeg.toFixed(6)}°
+                    {formatDeg(target.hostStar.raDeg)}, {formatDeg(target.hostStar.decDeg)}
                   </div>
                 </td>
               </tr>

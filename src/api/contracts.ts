@@ -3,7 +3,8 @@
  * Owned by Claude (Architecture & Backend); consumed strictly by Frontend.
  */
 
-export type DataSourceMode = 'live' | 'reference_fixture';
+/** All data is queried live from the NASA Exoplanet Archive; there is no offline or demo dataset. */
+export type DataSourceMode = 'live';
 
 export type MeasurementStatus =
   | 'measured'
@@ -36,8 +37,8 @@ export interface ScientificMeasurement<T = number> {
 
 export interface HostStarSummary {
   hostname: string;
-  raDeg: number; // ICRS J2000 decimal degrees
-  decDeg: number; // ICRS J2000 decimal degrees
+  raDeg: number | null; // archive `ra`, decimal degrees (ICRS); null when not reported
+  decDeg: number | null; // archive `dec`, decimal degrees (ICRS); null when not reported
   spectralType: string | null;
   distancePc: ScientificMeasurement<number>;
   teffK: ScientificMeasurement<number>;
@@ -49,28 +50,28 @@ export interface HostStarSummary {
 }
 
 export interface ExoplanetSearchItem {
-  id: string; // Canonical URL-safe slug or archive row ID (e.g., "trappist-1-e")
+  id: string; // Exact archive planet name (pl_name), e.g. "TRAPPIST-1 e"
   planetName: string;
   hostname: string;
-  discoveryMethod: DiscoveryMethod;
-  discoveryYear: number;
-  raDeg: number;
-  decDeg: number;
+  discoveryMethod: string; // as published by the archive
+  discoveryYear: number | null;
+  raDeg: number | null;
+  decDeg: number | null;
   orbitalPeriodDays: number | null;
   radiusEarth: number | null;
-  massEarth: number | null;
+  massEarth: number | null; // archive best mass (pl_bmasse)
+  massIsMsini: boolean; // true when massEarth is a minimum mass (M sin i)
   distancePc: number | null;
   spectralType: string | null;
-  isDefaultParameterSet: boolean;
 }
 
 export interface ExoplanetDetail {
   id: string;
   planetName: string;
-  archiveRecordTable: string; // e.g., "pscomppars" or "ps"
+  archiveRecordTable: string; // "pscomppars": composite values, each with its own reference
   retrievedAtUtc: string; // ISO-8601
-  discoveryMethod: DiscoveryMethod;
-  discoveryYear: number;
+  discoveryMethod: string; // as published by the archive
+  discoveryYear: number | null;
   discoveryFacility: string;
   discoveryReference: string;
   discoveryDoi?: string | null;
@@ -78,7 +79,8 @@ export interface ExoplanetDetail {
   planetaryParameters: {
     radiusEarth: ScientificMeasurement<number>;
     massEarth: ScientificMeasurement<number>;
-    massIsMsini: boolean; // True if radial velocity minimum mass (M sin i)
+    massIsMsini: boolean; // True if the value is a minimum mass (M sin i)
+    massProvenance: string | null; // archive pl_bmassprov, verbatim (e.g. "Mass", "M*sini")
     equilibriumTempK: ScientificMeasurement<number>;
     insolationFluxEarth: ScientificMeasurement<number>;
     bulkDensityGcm3: ScientificMeasurement<number>;
@@ -142,11 +144,12 @@ export type NotebookCategory =
 export interface ParameterSnapshot {
   planetName: string;
   hostname: string;
-  raDeg: number;
-  decDeg: number;
+  raDeg: number | null;
+  decDeg: number | null;
   periodDays: number | null;
   radiusEarth: number | null;
   massEarth: number | null;
+  massIsMsini?: boolean; // true when massEarth is a minimum mass (M sin i)
   capturedFromMode: DataSourceMode;
 }
 
