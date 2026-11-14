@@ -15,6 +15,7 @@ import {
 import { EvidenceExportModal } from './components/EvidenceExportModal';
 import { ExoplanetDetailPanel } from './components/ExoplanetDetailPanel';
 import { HeaderBar, WorkspaceTab } from './components/HeaderBar';
+import { IntroSearch } from './components/IntroSearch';
 import { ProvenancePanel } from './components/ProvenancePanel';
 import { ResearchNotebookPanel } from './components/ResearchNotebookPanel';
 import { SkyViewerPanel } from './components/SkyViewerPanel';
@@ -308,6 +309,13 @@ export function App() {
 
       <main id="main-workspace" className="flex-1 p-4 lg:p-6">
         {activeTab === 'explorer' && (
+          <>
+          <IntroSearch
+            query={searchParams.q ?? ''}
+            searchInputRef={searchInputRef}
+            onQueryChange={(q) => setSearchParams((prev) => ({ ...prev, q }))}
+            onPickExample={(name) => setSelectedId(name)}
+          />
           <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] xl:grid-cols-[340px_minmax(420px,1.25fr)_minmax(360px,1fr)] gap-4 items-start">
             <TargetSearchPanel
               mode={mode}
@@ -317,7 +325,6 @@ export function App() {
               selectedId={selectedId}
               loading={searchLoading}
               error={searchError}
-              searchInputRef={searchInputRef}
               onParamsChange={setSearchParams}
               onSelectTarget={(id) => setSelectedId(id)}
               onRetry={runSearch}
@@ -339,6 +346,7 @@ export function App() {
               />
             </div>
           </div>
+          </>
         )}
 
         {activeTab === 'notebook' && (
