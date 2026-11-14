@@ -99,6 +99,14 @@ describe('archive endpoints', () => {
     expect(body.provenance.notes).toMatch(/different publications/);
   });
 
+  it('reports limits over HTTP as direction-unverified with the raw NASA flag', async () => {
+    const res = await realFetch(`${base}/api/v1/exoplanets/${encodeURIComponent('TEST-1 b')}`);
+    const body = await res.json();
+    expect(body.orbitalParameters.eccentricity.status).toBe('limit_direction_unverified');
+    expect(body.orbitalParameters.eccentricity.rawLimitFlag).toBe(1);
+    expect(JSON.stringify(body)).not.toMatch(/"(upper|lower)_limit"/);
+  });
+
   it('answers 404 for unknown planets and unknown API routes', async () => {
     expect((await realFetch(`${base}/api/v1/exoplanets/NOPE`)).status).toBe(404);
     expect((await realFetch(`${base}/api/v9/nothing`)).status).toBe(404);
