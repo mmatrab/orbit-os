@@ -22,13 +22,26 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
     className="mb-4 p-5 rounded border border-slate-800 bg-[#0F151E]"
     aria-labelledby="intro-title"
   >
-    <h1 id="intro-title" className="text-lg font-semibold text-slate-100">
-      Explore confirmed exoplanets
+    <h1 id="intro-title" className="text-xl sm:text-2xl font-semibold text-slate-50">
+      Explore worlds beyond our Solar System
     </h1>
-    <p className="mt-1 text-sm text-slate-400 max-w-3xl">
-      Search NASA&apos;s catalogue of planets beyond our Solar System, see where their star sits in
-      the sky, and check every number against the paper it comes from.
+    <p className="mt-1.5 text-sm text-slate-300 max-w-3xl">
+      Every planet here is a confirmed exoplanet from the{' '}
+      <a
+        href="https://exoplanetarchive.ipac.caltech.edu/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-cyan-300 underline decoration-cyan-700 underline-offset-2 hover:text-cyan-200"
+      >
+        NASA Exoplanet Archive
+      </a>
+      , fetched live. Each number links to the scientific paper it comes from.
     </p>
+    <ol className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-400" aria-label="How it works">
+      <li><span className="text-cyan-300 font-semibold">1</span> Search a planet or star</li>
+      <li><span className="text-cyan-300 font-semibold">2</span> See its key facts and its star in real sky images</li>
+      <li><span className="text-cyan-300 font-semibold">3</span> Save notes and export the data with references</li>
+    </ol>
 
     <div className="mt-4 relative max-w-2xl">
       <Search
@@ -50,7 +63,7 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
     </div>
 
     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-      <span>Try:</span>
+      <span>Try a real planet:</span>
       {EXAMPLES.map((name) => (
         <button
           key={name}

@@ -35,6 +35,8 @@ beforeAll(async () => {
     ORBIT_CORS_ORIGINS: 'https://host.example',
     ORBIT_FRAME_ANCESTORS: "'self' https://host.example",
     ORBIT_TAP_URL: SYNTHETIC_TAP_URL,
+    // The shared server notebook is opt-in; these tests exercise it explicitly.
+    ORBIT_NOTEBOOK_MODE: 'server',
   });
   vi.stubGlobal('fetch', makeTapFetch(realFetch));
   const app = await createSpaceExplorerApp(config);

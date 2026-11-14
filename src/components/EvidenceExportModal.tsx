@@ -19,10 +19,6 @@ interface EvidenceExportModalProps {
   mode: DataSourceMode;
   notebookEntries: NotebookEntry[];
   sources: DataSourceStatus[];
-  onSubmitServerExport?: (
-    format: 'json' | 'csv' | 'markdown',
-    entryIds: string[]
-  ) => Promise<string | null>;
   onClose: () => void;
 }
 
@@ -32,7 +28,6 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
   mode,
   notebookEntries,
   sources,
-  onSubmitServerExport,
   onClose,
 }) => {
   const [format, setFormat] = useState<'json' | 'csv' | 'markdown'>('json');
@@ -83,15 +78,7 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
 
       triggerTextDownload(`orbit-os_${safeSlug}_evidence.${ext}`, previewText, mime);
 
-      if (mode === 'live' && onSubmitServerExport) {
-        const receipt = await onSubmitServerExport(
-          format,
-          selectedNotes.map((n) => n.id)
-        );
-        if (receipt) {
-          setArchiveStatus(`Export audit ID recorded on backend: ${receipt}`);
-        }
-      }
+      setArchiveStatus(`Downloaded orbit-os_${safeSlug}_evidence.${ext}`);
     } finally {
       setSubmitting(false);
     }

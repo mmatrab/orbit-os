@@ -39,7 +39,7 @@ declare module 'aladin-lite' {
     gotoRaDec: (ra: number, dec: number) => void;
     setFoV: (fovDeg: number) => void;
     getFoV?: () => [number, number];
-    setBaseImageLayer: (surveyId: string) => Promise<unknown> | unknown;
+    setBaseImageLayer: (surveyIdOrUrl: string) => Promise<unknown> | unknown;
     setProjection: (projection: string) => void;
     setFrame: (cooFrame: string) => void;
     showCooGrid: () => void;
@@ -48,6 +48,8 @@ declare module 'aladin-lite' {
     addCatalog: (catalog: AladinCatalog) => void;
     getRaDec?: () => [number, number];
     on?: (event: string, callback: (...args: unknown[]) => void) => void;
+    /** Renders the current view (survey + overlays) to a data URL. Async in Aladin Lite 3.x. */
+    getViewDataURL?: (options?: { format?: string; width?: number; height?: number; logo?: boolean }) => Promise<string>;
   }
 
   export interface AladinLiteModule {

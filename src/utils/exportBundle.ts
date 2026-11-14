@@ -16,7 +16,20 @@ export interface EvidenceBundle {
   target: ExoplanetDetail;
   notebookEntries: NotebookEntry[];
   provenanceSources: DataSourceStatus[];
+  /** Plain-language meaning of every `status` value used in this file. */
+  statusLegend: Record<string, string>;
 }
+
+export const STATUS_LEGEND: Record<string, string> = {
+  measured: 'Value as published in the cited reference (NASA Exoplanet Archive pscomppars).',
+  derived:
+    'Value calculated by the NASA Exoplanet Archive from other parameters (reference "Calculated Value", ' +
+    'e.g. a radius from a mass-radius relation), or a mass the archive does not report as a direct measurement. Not a measurement.',
+  limit_direction_unverified:
+    'The archive flags this value as a limit, but whether it is an upper or lower limit has not been verified. ' +
+    'raw_limit_flag / rawLimitFlag holds the untouched archive flag and rawLimitFlagColumn names the column it came from.',
+  not_measured: 'No value is reported by the archive. Left empty; nothing is estimated.',
+};
 
 export function escapeCsvCell(value: string | number | boolean | null | undefined): string {
   if (value === null || value === undefined) return '';
@@ -46,113 +59,96 @@ export function buildEvidenceBundle(
     target,
     notebookEntries,
     provenanceSources,
+    statusLegend: STATUS_LEGEND,
   };
 }
 
+export const CSV_HEADER = [
+  'category',
+  'parameter',
+  'value',
+  'unit',
+  'err_plus',
+  'err_minus',
+  'status',
+  'raw_limit_flag',
+  'raw_limit_flag_column',
+  'reference',
+  'reference_bibcode',
+  'doi',
+  'note',
+] as const;
+
 export function serializeBundleToCsv(bundle: EvidenceBundle): string {
   const { target } = bundle;
-  const rows: Array<[string, string, string, string, string, string, string, string]> = [
-    [
-      'category',
-      'parameter',
-      'value',
-      'unit',
-      'err_plus',
-      'err_minus',
-      'status',
-      'reference_or_note',
-    ],
-  ];
+  type Row = Array<string | number | null | undefined>;
+  const rows: Row[] = [[...CSV_HEADER]];
 
-  const pushMeasurement = (
-    category: string,
-    label: string,
-    m: ScientificMeasurement<number>
-  ) => {
+  const info = (category: string, parameter: string, value: string | number | null, unit = '', note = '') =>
+    rows.push([category, parameter, value, unit, '', '', 'identifier', '', '', '', '', '', note]);
+
+  const measurement = (category: string, parameter: string, m: ScientificMeasurement<number>, note = '') =>
     rows.push([
       category,
-      label,
-      m.value !== null ? String(m.value) : '',
+      parameter,
+      m.value,
       m.unit,
-      m.errPlus !== null && m.errPlus !== undefined ? String(m.errPlus) : '',
-      m.errMinus !== null && m.errMinus !== undefined ? String(m.errMinus) : '',
+      m.errPlus ?? null,
+      m.errMinus ?? null,
       exportStatus(m),
-      m.referenceLabel ?? m.unavailableReason ?? '',
+      m.rawLimitFlag ?? null,
+      m.rawLimitFlagColumn ?? null,
+      m.referenceLabel ?? null,
+      m.referenceBibcode ?? null,
+      m.doi ?? null,
+      [note, m.value === null ? m.unavailableReason ?? '' : ''].filter(Boolean).join(' '),
     ]);
-  };
 
-  rows.push([
-    'metadata',
-    'planet_name',
-    target.planetName,
-    '',
-    '',
-    '',
-    'measured',
-    target.archiveRecordTable,
-  ]);
-  rows.push([
-    'metadata',
-    'data_source_mode',
-    bundle.dataSourceMode,
-    '',
-    '',
-    '',
-    'derived',
-    bundle.generatedAtUtc,
-  ]);
-  rows.push(['host_star', 'hostname', target.hostStar.hostname, '', '', '', 'measured', '']);
-  rows.push([
-    'host_star',
-    'ra_icrs_deg',
-    target.hostStar.raDeg !== null ? String(target.hostStar.raDeg) : '',
-    'deg',
-    '',
-    '',
-    'measured',
-    formatRaHms(target.hostStar.raDeg),
-  ]);
-  rows.push([
-    'host_star',
-    'dec_icrs_deg',
-    target.hostStar.decDeg !== null ? String(target.hostStar.decDeg) : '',
-    'deg',
-    '',
-    '',
-    'measured',
-    formatDecDms(target.hostStar.decDeg),
-  ]);
-  pushMeasurement('host_star', 'distance', target.hostStar.distancePc);
-  pushMeasurement('host_star', 'effective_temperature', target.hostStar.teffK);
-  pushMeasurement('host_star', 'stellar_mass', target.hostStar.massSolar);
-  pushMeasurement('host_star', 'stellar_radius', target.hostStar.radiusSolar);
-  pushMeasurement('host_star', 'metallicity_feh', target.hostStar.metallicityFeH);
-  pushMeasurement('host_star', 'v_magnitude', target.hostStar.vMag);
+  info('metadata', 'planet_name', target.planetName);
+  info('metadata', 'archive_table', target.archiveRecordTable, '', 'Composite: values may come from different references');
+  info('metadata', 'retrieved_at_utc', target.retrievedAtUtc);
+  info('metadata', 'exported_at_utc', bundle.generatedAtUtc);
+  info('metadata', 'discovery_method', target.discoveryMethod);
+  info('metadata', 'discovery_year', target.discoveryYear);
+  info('host_star', 'hostname', target.hostStar.hostname);
+  info('host_star', 'ra_icrs_deg', target.hostStar.raDeg, 'deg', formatRaHms(target.hostStar.raDeg));
+  info('host_star', 'dec_icrs_deg', target.hostStar.decDeg, 'deg', formatDecDms(target.hostStar.decDeg));
+  info('host_star', 'spectral_type', target.hostStar.spectralType ?? null);
+  measurement('host_star', 'distance', target.hostStar.distancePc);
+  measurement('host_star', 'effective_temperature', target.hostStar.teffK);
+  measurement('host_star', 'stellar_mass', target.hostStar.massSolar);
+  measurement('host_star', 'stellar_radius', target.hostStar.radiusSolar);
+  measurement('host_star', 'metallicity_feh', target.hostStar.metallicityFeH);
+  measurement('host_star', 'v_magnitude', target.hostStar.vMag);
 
-  pushMeasurement('planet', 'radius_earth', target.planetaryParameters.radiusEarth);
-  pushMeasurement(
+  measurement('planet', 'radius', target.planetaryParameters.radiusEarth);
+  measurement(
     'planet',
-    target.planetaryParameters.massIsMsini ? 'mass_sin_i_earth' : 'mass_earth',
-    target.planetaryParameters.massEarth
+    target.planetaryParameters.massIsMsini ? 'minimum_mass_msini' : 'mass',
+    target.planetaryParameters.massEarth,
+    `archive pl_bmassprov: ${target.planetaryParameters.massProvenance ?? 'not reported'}.`
   );
-  pushMeasurement('planet', 'equilibrium_temp', target.planetaryParameters.equilibriumTempK);
-  pushMeasurement('planet', 'insolation_flux', target.planetaryParameters.insolationFluxEarth);
-  pushMeasurement('planet', 'bulk_density', target.planetaryParameters.bulkDensityGcm3);
+  measurement('planet', 'equilibrium_temperature', target.planetaryParameters.equilibriumTempK);
+  measurement('planet', 'insolation_flux', target.planetaryParameters.insolationFluxEarth);
+  measurement('planet', 'bulk_density', target.planetaryParameters.bulkDensityGcm3);
 
-  pushMeasurement('orbit', 'orbital_period', target.orbitalParameters.periodDays);
-  pushMeasurement('orbit', 'semi_major_axis', target.orbitalParameters.semiMajorAxisAu);
-  pushMeasurement('orbit', 'eccentricity', target.orbitalParameters.eccentricity);
-  pushMeasurement('orbit', 'inclination', target.orbitalParameters.inclinationDeg);
-  pushMeasurement('orbit', 'transit_duration', target.orbitalParameters.transitDurationHours);
+  measurement('orbit', 'orbital_period', target.orbitalParameters.periodDays);
+  measurement('orbit', 'semi_major_axis', target.orbitalParameters.semiMajorAxisAu);
+  measurement('orbit', 'eccentricity', target.orbitalParameters.eccentricity);
+  measurement('orbit', 'inclination', target.orbitalParameters.inclinationDeg);
+  measurement('orbit', 'transit_duration', target.orbitalParameters.transitDurationHours);
 
-  return rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n');
+  return rows.map((row) => row.map((c) => escapeCsvCell(c)).join(',')).join('\r\n') + '\r\n';
 }
 
 export function serializeBundleToMarkdown(bundle: EvidenceBundle): string {
   const { target } = bundle;
   const formatVal = (m: ScientificMeasurement<number>) => {
     const text = formatMeasurementValue(m);
-    return text === null ? `Not measured (${m.unavailableReason ?? 'unavailable'})` : `${text} ${m.unit}`;
+    if (text === null) return `Not measured (${m.unavailableReason ?? 'unavailable'})`;
+    const kind = m.status === 'derived' ? ' **(derived)**' : '';
+    const ref = m.referenceBibcode ? ` — ref. ${m.referenceBibcode}` : m.referenceLabel ? ` — ${m.referenceLabel}` : '';
+    return `${text} ${m.unit}${kind}${ref}`;
   };
 
   const lines: string[] = [
@@ -207,6 +203,13 @@ export function serializeBundleToMarkdown(bundle: EvidenceBundle): string {
       entry.body,
       '',
     ]),
+    '## How to read these values',
+    '- Values are as published in the cited reference unless marked **(derived)**, which means the archive computed them from other parameters.',
+    '- **Limit — direction unverified**: the archive flags the value as a limit, but whether it is an upper or lower bound has not been verified. See the JSON/CSV export for the raw archive flag.',
+    '- **Not measured**: the archive reports no value; nothing has been estimated.',
+    '- Units: Earth radii (R⊕), Earth masses (M⊕), days (d), parsecs (pc, 1 pc ≈ 3.26 light-years).',
+    `- This is a composite record (${target.archiveRecordTable}): different parameters can come from different papers.`,
+    '',
     '## Data Provenance & Acknowledgments',
     ...bundle.provenanceSources.map(
       (s) => `- **${s.name}** (${s.status}): ${s.citationText}`
@@ -225,5 +228,6 @@ export function triggerTextDownload(filename: string, content: string, mimeType:
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Revoking synchronously can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }

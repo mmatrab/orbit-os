@@ -13,6 +13,8 @@ import { formatUtcTimestamp } from '../utils/coordinates';
 
 interface ResearchNotebookPanelProps {
   mode: DataSourceMode;
+  /** Where notes are persisted: this browser only (default) or the deployment's shared server notebook. */
+  storage: 'browser' | 'server';
   activeTarget: ExoplanetDetail | null;
   entries: NotebookEntry[];
   pendingSnapshot: ParameterSnapshot | null;
@@ -32,6 +34,7 @@ const CATEGORIES: NotebookCategory[] = [
 
 export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
   mode,
+  storage,
   activeTarget,
   entries,
   pendingSnapshot,
@@ -151,8 +154,14 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
         <h2 id="notebook-title" className="text-xs font-semibold tracking-wide text-slate-100">
           Observation &amp; Research Notebook
         </h2>
-        <span className="font-mono text-[11px] text-slate-400">
-          Storage: Space Explorer server (unsynced entries stay in this browser)
+        <span className="text-[11px] text-slate-400" title={
+          storage === 'server'
+            ? 'This deployment stores notes on its server for every signed-in user of the host platform.'
+            : 'Notes are saved only in this browser on this device. Nobody else can see them; clearing site data deletes them. Export them to keep a copy.'
+        }>
+          {storage === 'server'
+            ? 'Saved on this deployment’s shared server notebook'
+            : 'Saved privately in this browser only — export to keep a copy'}
         </span>
       </div>
 
@@ -336,8 +345,8 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
                           {entry.syncState === 'synced'
                             ? 'Synced'
                             : entry.syncState === 'sync_error'
-                            ? 'Sync Pending'
-                            : 'Local Only'}
+                            ? 'Not yet saved to server'
+                            : 'This browser'}
                         </span>
                       </div>
                       <h4 className="text-[13px] font-semibold text-slate-100">{entry.title}</h4>

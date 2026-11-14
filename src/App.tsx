@@ -22,6 +22,7 @@ import { SkyViewerPanel } from './components/SkyViewerPanel';
 import { TargetSearchPanel } from './components/TargetSearchPanel';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
 import { pickExample } from './utils/examplePick';
+import { snapshotOf } from './utils/snapshot';
 
 const DEFAULT_TARGET = 'TRAPPIST-1 e';
 
@@ -206,16 +207,19 @@ export function App() {
     loadSources();
   }, [loadSources]);
 
-  // Sync notebook entries when live backend is active
+  // Notes stay in this browser unless the deployment explicitly enables the shared server notebook
+  // (ORBIT_NOTEBOOK_MODE=server, intended only behind the host platform's authentication).
+  const serverNotes = health?.notebookStorage === 'server';
+
   useEffect(() => {
-    if (mode !== 'live') return;
+    if (!serverNotes) return;
     client
       .listNotebookEntries()
       .then((serverEntries) => setNotebookEntries(serverEntries))
       .catch(() => {
         // Keep local entries intact if backend notebook endpoint is unavailable
       });
-  }, [client, mode]);
+  }, [client, serverNotes]);
 
   // Embedding bridge: announce readiness, report selections, accept host commands.
   useEffect(() => {
@@ -232,8 +236,13 @@ export function App() {
     }
   }, [launch.parentOrigin, selectedTarget]);
 
+  const pinToNotebook = (snapshot: ParameterSnapshot) => {
+    setPendingSnapshot(snapshot);
+    setActiveTab('notebook');
+  };
+
   const handleCreateNotebookEntry = async (req: CreateNotebookEntryRequest) => {
-    if (mode === 'live') {
+    if (serverNotes) {
       try {
         const created = await client.createNotebookEntry(req);
         setNotebookEntries((prev) => [created, ...prev]);
@@ -249,13 +258,13 @@ export function App() {
       ...req,
       createdAtUtc: now,
       updatedAtUtc: now,
-      syncState: mode === 'live' ? 'sync_error' : 'local_only',
+      syncState: serverNotes ? 'sync_error' : 'local_only',
     };
     setNotebookEntries((prev) => [localEntry, ...prev]);
   };
 
   const handleUpdateNotebookEntry = async (id: string, req: UpdateNotebookEntryRequest) => {
-    if (mode === 'live') {
+    if (serverNotes) {
       try {
         const updated = await client.updateNotebookEntry(id, req);
         setNotebookEntries((prev) => prev.map((e) => (e.id === id ? updated : e)));
@@ -273,7 +282,7 @@ export function App() {
               ...e,
               ...req,
               updatedAtUtc: now,
-              syncState: mode === 'live' ? 'sync_error' : 'local_only',
+              syncState: serverNotes ? 'sync_error' : 'local_only',
             }
           : e
       )
@@ -281,7 +290,7 @@ export function App() {
   };
 
   const handleDeleteNotebookEntry = async (id: string) => {
-    if (mode === 'live') {
+    if (serverNotes) {
       await client.deleteNotebookEntry(id).catch(() => undefined);
     }
     setNotebookEntries((prev) => prev.filter((e) => e.id !== id));
@@ -321,7 +330,8 @@ export function App() {
               setSelectedId(next.selectedId);
             }}
           />
-          <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] xl:grid-cols-[340px_minmax(420px,1.25fr)_minmax(360px,1fr)] gap-4 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)] gap-4 items-start">
+            <div className="lg:sticky lg:top-4">
             <TargetSearchPanel
               mode={mode}
               params={searchParams}
@@ -334,21 +344,63 @@ export function App() {
               onSelectTarget={(id) => setSelectedId(id)}
               onRetry={runSearch}
             />
+            </div>
 
-            <SkyViewerPanel target={selectedTarget} />
-
-            <div className="md:col-span-2 xl:col-span-1">
+            <div className="flex flex-col gap-4 min-w-0">
               <ExoplanetDetailPanel
                 mode={mode}
                 target={selectedTarget}
                 loading={detailLoading}
                 error={detailError}
-                onPinToNotebook={(snapshot) => {
-                  setPendingSnapshot(snapshot);
-                  setActiveTab('notebook');
-                }}
+                onPinToNotebook={pinToNotebook}
+                onRetry={loadSelectedTarget}
+                onOpenExport={() => setExportOpen(true)}
+              />
+
+              <SkyViewerPanel target={selectedTarget} />
+
+              <ExoplanetDetailPanel
+                view="advanced"
+                mode={mode}
+                target={selectedTarget}
+                loading={detailLoading}
+                error={detailError}
+                onPinToNotebook={pinToNotebook}
                 onRetry={loadSelectedTarget}
               />
+
+              {selectedTarget && (
+                <section
+                  className="p-4 rounded border border-slate-800 bg-[#0F151E] flex flex-wrap items-center gap-3 text-xs"
+                  aria-label="Notes and export"
+                >
+                  <div className="flex-1 min-w-[14rem]">
+                    <h2 className="text-sm font-semibold text-slate-100">Notes &amp; export</h2>
+                    <p className="text-slate-400 mt-0.5">
+                      {(() => {
+                        const n = notebookEntries.filter((e) => e.targetId === selectedTarget.id).length;
+                        const where = serverNotes ? 'in the shared notebook' : 'in this browser';
+                        return n === 0
+                          ? `No notes on ${selectedTarget.planetName} yet. Notes are saved ${where}.`
+                          : `${n} note${n === 1 ? '' : 's'} on ${selectedTarget.planetName}, saved ${where}.`;
+                      })()}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="sky-btn"
+                    onClick={() => pinToNotebook(snapshotOf(selectedTarget))}
+                  >
+                    Write a note
+                  </button>
+                  <button type="button" className="sky-btn" onClick={() => setActiveTab('notebook')}>
+                    Open notebook
+                  </button>
+                  <button type="button" className="sky-btn" onClick={() => setExportOpen(true)}>
+                    Export data (JSON, CSV, Markdown)
+                  </button>
+                </section>
+              )}
             </div>
           </div>
           </>
@@ -358,6 +410,7 @@ export function App() {
           <div className="max-w-6xl mx-auto">
             <ResearchNotebookPanel
               mode={mode}
+              storage={serverNotes ? 'server' : 'browser'}
               activeTarget={selectedTarget}
               entries={notebookEntries}
               pendingSnapshot={pendingSnapshot}
@@ -389,20 +442,6 @@ export function App() {
         mode={mode}
         notebookEntries={notebookEntries}
         sources={sources}
-        onSubmitServerExport={async (format, entryIds) => {
-          if (!selectedTarget) return null;
-          try {
-            const resp = await client.submitExportRecord({
-              targetId: selectedTarget.id,
-              format,
-              generatedAtUtc: new Date().toISOString(),
-              includedNotebookEntryIds: entryIds,
-            });
-            return resp.exportId;
-          } catch {
-            return null;
-          }
-        }}
         onClose={() => setExportOpen(false)}
       />
     </div>

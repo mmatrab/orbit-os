@@ -157,6 +157,11 @@ export function toFiniteNumber(val: unknown): number | null {
   return null;
 }
 
+/** True when an archive reference label marks a value the archive calculated rather than took from a paper. */
+export function isArchiveCalculated(label: string | undefined): boolean {
+  return !!label && /calculated value/i.test(label);
+}
+
 export function buildMeasurement(
   row: Record<string, unknown>,
   valueCol: string,
@@ -194,6 +199,12 @@ export function buildMeasurement(
   if (!options?.forceStatus && (rawLimitFlag === 1 || rawLimitFlag === -1)) {
     status = 'limit_direction_unverified';
   }
+  // The archive fills some gaps itself (e.g. a radius from a mass via Chen & Kipping 2017, density
+  // from mass and radius) and labels the reference "Calculated Value" (docs/pscp_calc.html).
+  // Such values are not measurements.
+  if (!options?.forceStatus && status === 'measured' && isArchiveCalculated(ref.label)) {
+    status = 'derived';
+  }
 
   const err1Raw = options?.err1Col ? toFiniteNumber(row[options.err1Col]) : null;
   const err2Raw = options?.err2Col ? toFiniteNumber(row[options.err2Col]) : null;
@@ -219,15 +230,40 @@ export function buildMeasurement(
   };
 }
 
+/** Counters that let operators and the smoke test tell fresh NASA requests from cache hits. */
+const tapStats = { upstreamRequests: 0, cacheHits: 0, sharedInFlight: 0 };
+const inFlight = new Map<string, Promise<unknown[]>>();
+
+export function getTapStats(): { upstreamRequests: number; cacheHits: number; sharedInFlight: number; cachedQueries: number } {
+  return { ...tapStats, cachedQueries: tapCache.size };
+}
+
 async function runTapQuery<T = Record<string, unknown>>(
   adql: string,
   timeoutMs = 15000
 ): Promise<T[]> {
   const cached = tapCache.get(adql);
   if (cached && cached.expiresAt > Date.now()) {
+    tapStats.cacheHits += 1;
     return cached.rows as T[];
   }
+  // Identical queries already on their way to NASA share one upstream request.
+  const pending = inFlight.get(adql);
+  if (pending) {
+    tapStats.sharedInFlight += 1;
+    return (await pending) as T[];
+  }
+  const request = fetchTapRows(adql, timeoutMs);
+  inFlight.set(adql, request);
+  try {
+    return (await request) as T[];
+  } finally {
+    inFlight.delete(adql);
+  }
+}
 
+async function fetchTapRows(adql: string, timeoutMs: number): Promise<unknown[]> {
+  tapStats.upstreamRequests += 1;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -264,7 +300,7 @@ async function runTapQuery<T = Record<string, unknown>>(
       }
       tapCache.set(adql, { expiresAt: Date.now() + cacheTtlMs, rows: json });
     }
-    return json as T[];
+    return json;
   } catch (err) {
     if (err instanceof UpstreamTapError) throw err;
     if (err instanceof Error && err.name === 'AbortError') {

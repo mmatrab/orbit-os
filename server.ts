@@ -13,7 +13,7 @@ async function main() {
     const base = config.basePath === '/' ? '/' : `${config.basePath}/`;
     console.log(
       `Space Explorer listening on http://${config.host}:${config.port}${base} ` +
-        `(${config.isProduction ? 'production' : 'development'}, data: ${config.dataDir})`
+        `(${config.isProduction ? 'production' : 'development'}, notes: ${config.notebookMode === 'server' ? `shared server notebook in ${config.dataDir}` : 'kept in each visitor\'s browser'})`
     );
   });
 }

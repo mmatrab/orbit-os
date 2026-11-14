@@ -31,7 +31,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   return (
     <div className="border-b border-slate-800 bg-[#0B0F17]">
       {/* Strict 3-Zone Top Bar */}
-      <header className="flex items-center justify-between gap-8 px-4 lg:px-6 h-14 border-b border-slate-800/80">
+      <header className="flex flex-wrap items-center justify-between gap-x-8 px-4 lg:px-6 min-h-14 border-b border-slate-800/80">
         {/* Zone 1: Single-element Brand Wordmark */}
         <span className="text-base font-semibold tracking-tight text-slate-100 whitespace-nowrap shrink-0">
           ORBIT OS
@@ -39,7 +39,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
         {/* Zone 2: Clean Typography Navigation Links */}
         <nav
-          className="flex items-center gap-6 overflow-x-auto"
+          className="order-3 w-full sm:order-none sm:w-auto flex items-center gap-5 sm:gap-6 overflow-x-auto"
           role="tablist"
           aria-label="ORBIT OS workspaces"
         >
@@ -85,7 +85,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </nav>
 
         {/* Zone 3: Single Primary Action */}
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 py-2 sm:py-0">
           <button
             type="button"
             disabled={!selectedTarget}
@@ -93,7 +93,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Export Evidence</span>
+            <span>Export data</span>
           </button>
         </div>
       </header>
