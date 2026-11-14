@@ -6,7 +6,11 @@ import {
   ExoplanetSearchItem,
   SearchTargetsParams,
 } from '../api/contracts';
-import { formatDecDms, formatRaHms } from '../utils/coordinates';
+
+/** Rounds to 3 significant figures for scanning; full values are in the planet view. */
+function short(n: number): string {
+  return Number(n.toPrecision(3)).toLocaleString('en-US');
+}
 
 interface TargetSearchPanelProps {
   mode: DataSourceMode;
@@ -55,6 +59,11 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
     }
   };
 
+  const activeFilterCount =
+    (params.discoveryMethod && params.discoveryMethod !== 'ALL' ? 1 : 0) +
+    (params.requireRadius ? 1 : 0) +
+    (params.requireMass ? 1 : 0);
+
   const hasActiveFilters =
     Boolean(params.q?.trim()) ||
     (params.discoveryMethod && params.discoveryMethod !== 'ALL') ||
@@ -67,22 +76,33 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
       aria-labelledby="search-panel-title"
     >
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
-        <h2 id="search-panel-title" className="text-xs font-semibold tracking-wide text-slate-100">
-          Results &amp; Filters
+        <h2 id="search-panel-title" className="text-sm font-semibold text-slate-100">
+          Planets
         </h2>
-        <span className="font-mono tabular-nums text-[11px] text-slate-400" aria-live="polite">
-          {loading ? 'Querying…' : `${items.length} of ${totalCount} targets`}
+        <span className="text-[11px] text-slate-400" aria-live="polite">
+          {loading
+            ? 'Searching…'
+            : totalCount > items.length
+            ? `${items.length} of ${totalCount.toLocaleString('en-US')} · nearest first`
+            : `${totalCount.toLocaleString('en-US')} found · nearest first`}
         </span>
       </div>
 
       <div className="p-4 flex flex-col gap-3">
-        <div className="flex flex-col gap-2.5">
+        <details className="group text-xs" open={Boolean(hasActiveFilters && !params.q?.trim())}>
+          <summary className="cursor-pointer select-none text-slate-300 hover:text-slate-100 inline-flex items-center gap-2">
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="px-1.5 rounded bg-cyan-500/20 text-cyan-200 text-[10px]">{activeFilterCount} on</span>
+            )}
+          </summary>
+        <div className="flex flex-col gap-2.5 mt-2.5">
           <div>
             <label
               htmlFor="method-filter"
               className="block text-xs font-medium text-slate-300 mb-1.5"
             >
-              Detection Method
+              How it was discovered
             </label>
             <select
               id="method-filter"
@@ -114,7 +134,7 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                   }
                   className="accent-cyan-400 rounded"
                 />
-                <span>Measured Radius</span>
+                <span>Has a radius</span>
               </label>
               <label className="inline-flex items-center gap-1.5 cursor-pointer">
                 <input
@@ -125,7 +145,7 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                   }
                   className="accent-cyan-400 rounded"
                 />
-                <span>Measured Mass</span>
+                <span>Has a mass</span>
               </label>
             </div>
 
@@ -143,20 +163,21 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                 }
                 className="text-[11px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2 cursor-pointer"
               >
-                Reset filters
+                Clear search and filters
               </button>
             )}
           </div>
         </div>
+        </details>
 
-        <div className="border-t border-slate-800 pt-3">
+        <div>
           {error && (
             <div
               className="p-3 rounded border border-rose-500/40 bg-rose-950/30 text-rose-200 text-xs flex flex-col gap-2"
               role="alert"
             >
               <div>
-                <strong className="block text-rose-100 mb-0.5">Live Archive Query Failed</strong>
+                <strong className="block text-rose-100 mb-0.5">Search failed</strong>
                 <span>{error}</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -166,7 +187,7 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border border-rose-400/50 hover:bg-rose-500/20 transition-colors cursor-pointer"
                 >
                   <RotateCw className="w-3 h-3" aria-hidden="true" />
-                  <span>Retry Live Query</span>
+                  <span>Try again</span>
                 </button>
               </div>
             </div>
@@ -177,19 +198,19 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
               className="p-4 rounded border border-dashed border-slate-700 text-center text-xs text-slate-400"
               aria-busy="true"
             >
-              Querying exoplanet catalog…
+              Searching the NASA Exoplanet Archive…
             </div>
           )}
 
           {!error && !loading && items.length === 0 && (
             <div className="p-4 rounded border border-dashed border-slate-700 text-center text-xs text-slate-400">
-              No catalog targets match the active filter criteria.
+              No planets match. Check the spelling (e.g. “TRAPPIST-1”) or clear the filters.
             </div>
           )}
 
           {!error && items.length > 0 && (
             <ul
-              className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-1"
+              className="flex flex-col gap-1.5 max-h-[340px] lg:max-h-[calc(100vh-260px)] overflow-y-auto pr-1"
               role="listbox"
               aria-label="Exoplanet search results"
             >
@@ -206,7 +227,7 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                       aria-selected={isSelected}
                       onClick={() => onSelectTarget(item.id)}
                       onKeyDown={(e) => handleKeyDown(e, idx)}
-                      className={`w-full text-left px-3 py-2.5 rounded border transition-colors cursor-pointer ${
+                      className={`w-full text-left px-3 py-2 rounded border transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-cyan-400 ${
                         isSelected
                           ? 'border-cyan-400/80 bg-cyan-950/25'
                           : 'border-slate-800 bg-[#07090E] hover:border-slate-600'
@@ -216,28 +237,18 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                         <span className="text-[13px] font-semibold text-slate-100">
                           {item.planetName}
                         </span>
-                        <span className="text-[11px] text-slate-400 whitespace-nowrap">
-                          {item.discoveryMethod} · {item.discoveryYear || '—'}
+                        <span className="text-[11px] text-slate-500 whitespace-nowrap">
+                          {item.discoveryYear ?? ''}
                         </span>
                       </div>
-
-                      <div className="font-mono tabular-nums text-[11px] text-slate-400 mt-1">
-                        {formatRaHms(item.raDeg)} {formatDecDms(item.decDeg)}
-                      </div>
-
-                      <div className="font-mono tabular-nums text-[11px] text-slate-500 mt-1 flex flex-wrap gap-x-2">
-                        <span>
-                          P {item.orbitalPeriodDays !== null ? `${item.orbitalPeriodDays} d` : '—'}
-                        </span>
-                        <span aria-hidden="true">·</span>
-                        <span>
-                          Rp {item.radiusEarth !== null ? `${item.radiusEarth} R⊕` : 'unmeasured'}
-                        </span>
-                        <span aria-hidden="true">·</span>
-                        <span>
-                          {item.massIsMsini ? 'Mp sin i' : 'Mp'}{' '}
-                          {item.massEarth !== null ? `${item.massEarth} M⊕` : 'unmeasured'}
-                        </span>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        {[
+                          item.discoveryMethod,
+                          item.distancePc !== null ? `${short(item.distancePc * 3.2616)} light-years` : null,
+                          item.orbitalPeriodDays !== null ? `${short(item.orbitalPeriodDays)}-day orbit` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </div>
                     </button>
                   </li>

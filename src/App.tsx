@@ -13,7 +13,7 @@ import {
   UpdateNotebookEntryRequest,
 } from './api/contracts';
 import { EvidenceExportModal } from './components/EvidenceExportModal';
-import { ExoplanetDetailPanel } from './components/ExoplanetDetailPanel';
+import { ExoplanetDetailPanel, type PlanetTab } from './components/ExoplanetDetailPanel';
 import { HeaderBar, WorkspaceTab } from './components/HeaderBar';
 import { IntroSearch } from './components/IntroSearch';
 import { ProvenancePanel } from './components/ProvenancePanel';
@@ -22,7 +22,6 @@ import { SkyViewerPanel } from './components/SkyViewerPanel';
 import { TargetSearchPanel } from './components/TargetSearchPanel';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
 import { pickExample } from './utils/examplePick';
-import { snapshotOf } from './utils/snapshot';
 
 const DEFAULT_TARGET = 'TRAPPIST-1 e';
 
@@ -49,6 +48,14 @@ function makeId(): string {
 export function App() {
   const mode: DataSourceMode = 'live';
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('explorer');
+  const [planetTab, setPlanetTab] = useState<PlanetTab>('overview');
+
+  // The sky canvas measured 0×0 while hidden; let Aladin re-measure when it is shown again.
+  useEffect(() => {
+    if (planetTab === 'overview' && activeTab === 'explorer') {
+      window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    }
+  }, [planetTab, activeTab]);
   const launch = useMemo(() => readLaunchOptions(), []);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -314,10 +321,9 @@ export function App() {
         healthError={healthError}
         selectedTarget={selectedTarget}
         onSelectTab={setActiveTab}
-        onOpenExport={() => setExportOpen(true)}
       />
 
-      <main id="main-workspace" className="flex-1 p-4 lg:p-6">
+      <main id="main-workspace" className="flex-1 w-full max-w-[1400px] mx-auto p-4 lg:p-6">
         {activeTab === 'explorer' && (
           <>
           <IntroSearch
@@ -355,51 +361,30 @@ export function App() {
                 onPinToNotebook={pinToNotebook}
                 onRetry={loadSelectedTarget}
                 onOpenExport={() => setExportOpen(true)}
+                planetTab={planetTab}
+                onPlanetTabChange={setPlanetTab}
               />
 
-              <SkyViewerPanel target={selectedTarget} />
+              {/* Kept mounted while hidden so the sky renderer is not restarted on every tab switch. */}
+              <div
+                id="planet-panel-overview"
+                role="tabpanel"
+                aria-labelledby="planet-tab-overview"
+                hidden={planetTab !== 'overview'}
+              >
+                <SkyViewerPanel target={selectedTarget} />
+              </div>
 
-              <ExoplanetDetailPanel
-                view="advanced"
-                mode={mode}
-                target={selectedTarget}
-                loading={detailLoading}
-                error={detailError}
-                onPinToNotebook={pinToNotebook}
-                onRetry={loadSelectedTarget}
-              />
-
-              {selectedTarget && (
-                <section
-                  className="p-4 rounded border border-slate-800 bg-[#0F151E] flex flex-wrap items-center gap-3 text-xs"
-                  aria-label="Notes and export"
-                >
-                  <div className="flex-1 min-w-[14rem]">
-                    <h2 className="text-sm font-semibold text-slate-100">Notes &amp; export</h2>
-                    <p className="text-slate-400 mt-0.5">
-                      {(() => {
-                        const n = notebookEntries.filter((e) => e.targetId === selectedTarget.id).length;
-                        const where = serverNotes ? 'in the shared notebook' : 'in this browser';
-                        return n === 0
-                          ? `No notes on ${selectedTarget.planetName} yet. Notes are saved ${where}.`
-                          : `${n} note${n === 1 ? '' : 's'} on ${selectedTarget.planetName}, saved ${where}.`;
-                      })()}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="sky-btn"
-                    onClick={() => pinToNotebook(snapshotOf(selectedTarget))}
-                  >
-                    Write a note
-                  </button>
-                  <button type="button" className="sky-btn" onClick={() => setActiveTab('notebook')}>
-                    Open notebook
-                  </button>
-                  <button type="button" className="sky-btn" onClick={() => setExportOpen(true)}>
-                    Export data (JSON, CSV, Markdown)
-                  </button>
-                </section>
+              {planetTab === 'data' && (
+                <ExoplanetDetailPanel
+                  view="advanced"
+                  mode={mode}
+                  target={selectedTarget}
+                  loading={detailLoading}
+                  error={detailError}
+                  onPinToNotebook={pinToNotebook}
+                  onRetry={loadSelectedTarget}
+                />
               )}
             </div>
           </div>

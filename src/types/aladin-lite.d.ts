@@ -14,6 +14,9 @@ declare module 'aladin-lite' {
     showFrame?: boolean;
     showCooGridControl?: boolean;
     showSimbadPointerControl?: boolean;
+    showCooLocation?: boolean;
+    showProjectionControl?: boolean;
+    showContextMenu?: boolean;
   }
 
   export interface AladinCatalogOptions {

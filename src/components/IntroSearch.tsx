@@ -19,7 +19,7 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
   onPickExample,
 }) => (
   <section
-    className="mb-4 p-5 rounded border border-slate-800 bg-[#0F151E]"
+    className="mb-4 px-5 py-4 rounded border border-slate-800 bg-[#0F151E]"
     aria-labelledby="intro-title"
   >
     <h1 id="intro-title" className="text-xl sm:text-2xl font-semibold text-slate-50">
@@ -35,15 +35,10 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
       >
         NASA Exoplanet Archive
       </a>
-      , fetched live. Each number links to the scientific paper it comes from.
+      , fetched live, with the paper behind every number. Search a planet, then explore its star in real sky images.
     </p>
-    <ol className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-400" aria-label="How it works">
-      <li><span className="text-cyan-300 font-semibold">1</span> Search a planet or star</li>
-      <li><span className="text-cyan-300 font-semibold">2</span> See its key facts and its star in real sky images</li>
-      <li><span className="text-cyan-300 font-semibold">3</span> Save notes and export the data with references</li>
-    </ol>
 
-    <div className="mt-4 relative max-w-2xl">
+    <div className="mt-3 relative max-w-2xl">
       <Search
         className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
         aria-hidden="true"
@@ -58,8 +53,14 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
         placeholder="Search a planet or star, e.g. TRAPPIST-1"
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
-        className="w-full pl-10 pr-3 py-3 text-base bg-[#07090E] border border-slate-600 rounded text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
+        className="w-full pl-10 pr-10 py-3 text-base bg-[#07090E] border border-slate-600 rounded text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
       />
+      <kbd
+        className="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 px-1.5 rounded border border-slate-700 text-[11px] text-slate-500 font-mono"
+        title="Press / anywhere to jump to the search"
+      >
+        /
+      </kbd>
     </div>
 
     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
@@ -74,7 +75,6 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
           {name}
         </button>
       ))}
-      <span className="ml-auto font-mono text-[10px] text-slate-500">Shortcut: /</span>
     </div>
   </section>
 );

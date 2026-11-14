@@ -215,6 +215,10 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
           showFrame: false,
           showCooGridControl: false,
           showSimbadPointerControl: false,
+          // Our own header already shows the coordinates; keep the canvas uncluttered.
+          showCooLocation: false,
+          showProjectionControl: false,
+          showContextMenu: false,
         });
         const overlay = A.catalog({
           name: 'Host star (NASA Exoplanet Archive position)',
@@ -437,7 +441,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
             Sky around {target ? target.hostStar.hostname : 'the host star'}
           </h2>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Real survey images centred on the host star. The planet itself is too faint to see.
+            Real telescope survey images centred on the host star (circle). The planet itself is too faint to see.
           </p>
         </div>
         {target && (
@@ -604,11 +608,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
               <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" /> Open in Aladin Lite
             </a>
           )}
-          <button type="button" onClick={downloadMetadata} disabled={!target} className="sky-btn">
-            <Download className="w-3.5 h-3.5" aria-hidden="true" /> View details (JSON)
-          </button>
           <span className="text-[11px] text-slate-500 ml-auto">
-            {resolved ? `Images: ${resolved.credit}` : 'Images: CDS / ESA HiPS sky surveys'} · Viewer: Aladin Lite (CDS)
+            {resolved ? `Images: ${resolved.credit}` : 'Images: CDS / ESA sky surveys'} · Aladin Lite (CDS)
           </span>
         </div>
         {exportNote && (
@@ -618,8 +619,11 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         )}
 
         <details className="text-[11px] text-slate-400">
-          <summary className="cursor-pointer select-none text-slate-300">More view options</summary>
-          <div className="mt-2 flex flex-wrap gap-4">
+          <summary className="cursor-pointer select-none text-slate-300">More options</summary>
+          <div className="mt-2 flex flex-wrap items-center gap-4">
+            <button type="button" onClick={downloadMetadata} disabled={!target} className="sky-btn">
+              <Download className="w-3.5 h-3.5" aria-hidden="true" /> View details (JSON)
+            </button>
             <label className="inline-flex items-center gap-1.5">
               <span title="ICRS is the standard equatorial frame used for RA/Dec. Galactic aligns with the Milky Way.">Coordinate frame</span>
               <select
@@ -648,12 +652,11 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
             </span>
             {resolved && <span className="break-all">Tile server: {resolved.baseUrl}</span>}
           </div>
+          <p className="mt-2 leading-snug">
+            The circle marks the host star&apos;s catalogue position from the NASA Exoplanet Archive. Survey
+            images were taken decades ago, so fast-moving nearby stars can appear slightly offset from it.
+          </p>
         </details>
-
-        <p className="text-[11px] text-slate-500 leading-snug">
-          The circle marks the host star&apos;s catalogue position from the NASA Exoplanet Archive. Survey
-          images were taken decades ago, so fast-moving nearby stars can appear slightly offset from it.
-        </p>
       </div>
     </section>
   );

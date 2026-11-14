@@ -54,8 +54,8 @@ export const ProvenancePanel: React.FC<ProvenancePanelProps> = ({
       aria-labelledby="provenance-title"
     >
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
-        <h2 id="provenance-title" className="text-xs font-semibold tracking-wide text-slate-100">
-          Data Sources &amp; Scientific Provenance
+        <h2 id="provenance-title" className="text-sm font-semibold text-slate-100">
+          Data sources
         </h2>
         <button
           type="button"

@@ -1,10 +1,22 @@
 import type { ScientificMeasurement } from '../api/contracts';
 
-/** Friendly unit labels for the overview; the full tables keep the archive's own unit strings. */
+/** Unit labels shown on screen. Exports keep the API's unit codes (R_earth, M_earth, d, …) for analysis. */
 const UNIT_LABELS: Record<string, string> = {
   R_earth: 'Earth radii',
   M_earth: 'Earth masses',
   d: 'days',
+  h: 'hours',
+  pc: 'parsecs',
+  K: 'K',
+  M_sun: 'solar masses',
+  R_sun: 'solar radii',
+  S_earth: '× Earth’s sunlight',
+  'g/cm^3': 'g/cm³',
+  AU: 'AU',
+  deg: 'degrees',
+  dex: 'dex',
+  mag: 'mag',
+  dimensionless: '',
 };
 
 export function friendlyUnit(unit: string): string {
