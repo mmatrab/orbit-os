@@ -6,6 +6,7 @@ import {
   ScientificMeasurement,
 } from '../api/contracts';
 import { formatDecDms, formatDeg, formatRaHms } from './coordinates';
+import { exportStatus, formatMeasurementValue } from './measurementFormat';
 
 export interface EvidenceBundle {
   schemaVersion: 'orbit-os.evidence.v1';
@@ -75,7 +76,7 @@ export function serializeBundleToCsv(bundle: EvidenceBundle): string {
       m.unit,
       m.errPlus !== null && m.errPlus !== undefined ? String(m.errPlus) : '',
       m.errMinus !== null && m.errMinus !== undefined ? String(m.errMinus) : '',
-      m.status,
+      exportStatus(m),
       m.referenceLabel ?? m.unavailableReason ?? '',
     ]);
   };
@@ -150,14 +151,8 @@ export function serializeBundleToCsv(bundle: EvidenceBundle): string {
 export function serializeBundleToMarkdown(bundle: EvidenceBundle): string {
   const { target } = bundle;
   const formatVal = (m: ScientificMeasurement<number>) => {
-    if (m.value === null) return `Not measured (${m.unavailableReason ?? 'unavailable'})`;
-    const err =
-      m.errPlus !== null && m.errPlus !== undefined
-        ? m.isSymmetricErr
-          ? ` ± ${m.errPlus}`
-          : ` (+${m.errPlus} / -${m.errMinus ?? '?'})`
-        : '';
-    return `${m.value}${err} ${m.unit}`;
+    const text = formatMeasurementValue(m);
+    return text === null ? `Not measured (${m.unavailableReason ?? 'unavailable'})` : `${text} ${m.unit}`;
   };
 
   const lines: string[] = [

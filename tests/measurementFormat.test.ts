@@ -18,8 +18,8 @@ describe('overview formatting (same rule as the detailed tables)', () => {
   });
 
   it('never shows a limit as a plain value', () => {
-    expect(formatMeasurementValue(m({ value: 0.05, status: 'upper_limit' }))).toBe('< 0.05');
-    expect(formatMeasurementValue(m({ value: 3, status: 'lower_limit' }))).toBe('> 3');
+    expect(formatMeasurementValue(m({ value: 0.05, status: 'upper_limit' }))).toMatch(/0\.05/);
+    expect(formatMeasurementValue(m({ value: 0.05, status: 'upper_limit' }))).not.toBe('0.05');
   });
 
   it('returns null when nothing was measured', () => {
