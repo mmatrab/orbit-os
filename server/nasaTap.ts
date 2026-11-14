@@ -187,11 +187,12 @@ export function buildMeasurement(
     };
   }
 
-  const limVal = options?.limCol ? toFiniteNumber(row[options.limCol]) : 0;
+  // The sign convention of the archive's limit flags is not reliably documented for pscomppars,
+  // so a flagged value is reported as a limit of unverified direction, with the raw flag kept.
+  const rawLimitFlag = options?.limCol ? toFiniteNumber(row[options.limCol]) : null;
   let status: MeasurementStatus = options?.forceStatus ?? 'measured';
-  if (!options?.forceStatus) {
-    if (limVal === 1) status = 'upper_limit';
-    else if (limVal === -1) status = 'lower_limit';
+  if (!options?.forceStatus && (rawLimitFlag === 1 || rawLimitFlag === -1)) {
+    status = 'limit_direction_unverified';
   }
 
   const err1Raw = options?.err1Col ? toFiniteNumber(row[options.err1Col]) : null;
@@ -212,6 +213,7 @@ export function buildMeasurement(
     errMinus,
     isSymmetricErr,
     status,
+    ...(options?.limCol ? { rawLimitFlag, rawLimitFlagColumn: options.limCol } : {}),
     referenceLabel: label,
     referenceBibcode: ref.bibcode,
   };

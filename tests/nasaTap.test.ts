@@ -38,9 +38,25 @@ describe('measurements', () => {
     expect(m).toMatchObject({ value: 5000, errPlus: 50, errMinus: 70, isSymmetricErr: false, status: 'measured' });
   });
 
-  it('marks limit flags instead of presenting a measurement', () => {
+  it('reports a flagged limit without claiming a direction, keeping the raw NASA flag', () => {
     const m = buildMeasurement(syntheticDetailRow(), 'pl_orbeccen', '', { limCol: 'pl_orbeccenlim' });
-    expect(m.status).toBe('upper_limit');
+    expect(m.status).toBe('limit_direction_unverified');
+    expect(m.rawLimitFlag).toBe(1);
+    expect(m.rawLimitFlagColumn).toBe('pl_orbeccenlim');
+  });
+
+  it('keeps a -1 flag raw as well', () => {
+    const m = buildMeasurement(syntheticDetailRow({ pl_orbeccenlim: -1 }), 'pl_orbeccen', '', {
+      limCol: 'pl_orbeccenlim',
+    });
+    expect(m.status).toBe('limit_direction_unverified');
+    expect(m.rawLimitFlag).toBe(-1);
+  });
+
+  it('reports a 0 flag as a measurement with the raw flag preserved', () => {
+    const m = buildMeasurement(syntheticDetailRow(), 'st_teff', 'K', { limCol: 'st_tefflim' });
+    expect(m.status).toBe('measured');
+    expect(m.rawLimitFlag).toBe(0);
   });
 
   it('reports a missing value as not measured, never as zero', () => {
@@ -113,6 +129,16 @@ describe('archive adapter with a stubbed TAP service', () => {
     const callsAfterFirst = log.length;
     await searchNasaExoplanets({ q: 'cache' });
     expect(log.length).toBe(callsAfterFirst);
+  });
+
+  it('never emits an assumed upper/lower limit status from the API adapter', async () => {
+    const detail = await getNasaExoplanetDetail('TEST-1 b');
+    expect(JSON.stringify(detail)).not.toMatch(/"(upper|lower)_limit"/);
+    expect(detail?.orbitalParameters.eccentricity).toMatchObject({
+      status: 'limit_direction_unverified',
+      rawLimitFlag: 1,
+      rawLimitFlagColumn: 'pl_orbeccenlim',
+    });
   });
 
   it('returns null for an unknown planet', async () => {
