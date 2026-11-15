@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "snapshot": "node scripts/generate-snapshot.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",
