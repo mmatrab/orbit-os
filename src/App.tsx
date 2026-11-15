@@ -352,6 +352,7 @@ export function App() {
             }}
           />
           <FindAWorld
+            key={selectedTarget?.id ?? 'none'}
             target={selectedTarget}
             onExploreSky={() => document.getElementById('sky-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
           />
