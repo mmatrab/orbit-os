@@ -78,6 +78,9 @@ export interface SnapshotPlanet {
   radiusEarth: number | null;
   radiusStatus: ValueStatus | null;
   distancePc: number | null;
+  /** Available in dated NASA snapshots when the generator includes coordinates. */
+  raDeg?: number | null;
+  decDeg?: number | null;
 }
 
 export interface SnapshotFile {
