@@ -1,4 +1,5 @@
 import React from 'react';
+import { Search } from 'lucide-react';
 import { DataSourceMode, ExoplanetDetail, HealthResponse } from '../api/contracts';
 
 export type WorkspaceTab = 'explorer' | 'notebook' | 'provenance';
@@ -12,6 +13,7 @@ interface HeaderBarProps {
   healthError: string | null;
   selectedTarget: ExoplanetDetail | null;
   onSelectTab: (tab: WorkspaceTab) => void;
+  onOpenSearch: () => void;
 }
 
 const TABS: { id: WorkspaceTab; label: (n: { notes: number }) => string }[] = [
@@ -27,6 +29,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   health,
   healthError,
   onSelectTab,
+  onOpenSearch,
 }) => {
   const online = health?.status === 'ok' && !healthError;
   return (
@@ -50,8 +53,15 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           {healthError ? 'Service unreachable' : online ? 'Live NASA data' : 'Connecting…'}
         </span>
 
+        <div className="flex items-center gap-3 sm:gap-5 order-3 w-full sm:order-none sm:w-auto">
+          <button type="button" onClick={onOpenSearch}
+            className="inline-flex items-center gap-1.5 shrink-0 rounded border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-cyan-200 hover:border-cyan-400 hover:bg-slate-800/70 cursor-pointer"
+            title="Go to the main planet search (shortcut /)">
+            <Search className="w-3.5 h-3.5" aria-hidden="true" />
+            Search
+          </button>
         <nav
-          className="order-3 w-full sm:order-none sm:w-auto flex items-center gap-6 overflow-x-auto"
+          className="w-full sm:w-auto flex items-center gap-5 overflow-x-auto"
           role="tablist"
           aria-label="Space Explorer sections"
         >
@@ -72,6 +82,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </button>
           ))}
         </nav>
+        </div>
       </div>
     </header>
   );
