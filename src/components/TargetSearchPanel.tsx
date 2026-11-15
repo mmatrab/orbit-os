@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { RotateCw } from 'lucide-react';
+import { LIGHT_YEARS_PER_PARSEC } from '../stories/planetSnapshot';
 import {
   DataSourceMode,
   DiscoveryMethod,
@@ -244,7 +245,7 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                       <div className="text-[11px] text-slate-400 mt-0.5">
                         {[
                           item.discoveryMethod,
-                          item.distancePc !== null ? `${short(item.distancePc * 3.2616)} light-years` : null,
+                          item.distancePc !== null ? `${short(item.distancePc * LIGHT_YEARS_PER_PARSEC)} light-years` : null,
                           item.orbitalPeriodDays !== null ? `${short(item.orbitalPeriodDays)}-day orbit` : null,
                         ]
                           .filter(Boolean)

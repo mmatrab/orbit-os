@@ -18,7 +18,7 @@ import { HeaderBar, WorkspaceTab } from './components/HeaderBar';
 import { IntroSearch } from './components/IntroSearch';
 import { ProvenancePanel } from './components/ProvenancePanel';
 import { ResearchNotebookPanel } from './components/ResearchNotebookPanel';
-import { SkyViewerPanel } from './components/SkyViewerPanel';
+import { SkyViewerPanel, type SkyViewerActions } from './components/SkyViewerPanel';
 import { SpaceStage } from './components/SpaceStage';
 import { FindAWorld } from './components/FindAWorld';
 import { StoryCharts } from './components/StoryCharts';
@@ -63,6 +63,22 @@ export function App() {
   const launch = useMemo(() => readLaunchOptions(), []);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const skyActionsRef = useRef<SkyViewerActions | null>(null);
+  const [skyFocusRequest, setSkyFocusRequest] = useState(0);
+
+  const exploreSky = () => {
+    setPlanetTab('overview');
+    setSkyFocusRequest((n) => n + 1);
+    window.requestAnimationFrame(() => {
+      document.getElementById('space-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('stage-tab-sky')?.focus({ preventScroll: true });
+    });
+  };
+
+  const shareWorld = async (): Promise<string> =>
+    skyActionsRef.current
+      ? skyActionsRef.current.exportPng()
+      : 'The sky viewer is not ready yet. Open “Explore its sky” and try again once the image has loaded.';
 
   const client = useMemo(() => new OrbitApiClient(), []);
 
@@ -352,19 +368,19 @@ export function App() {
             }}
           />
           <FindAWorld
-            key={selectedTarget?.id ?? 'none'}
             target={selectedTarget}
-            onExploreSky={() => document.getElementById('sky-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            loading={detailLoading}
+            onShare={shareWorld}
+            onExploreSky={exploreSky}
           />
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] gap-4 items-start">
             {/* Left: the picture of the star and planet, then the list of planets to pick from. */}
             <div className="flex flex-col gap-4 min-w-0">
-              <div id="sky-stage">
-                <SpaceStage
-                  sky={<SkyViewerPanel target={selectedTarget} />}
-                  system={selectedTarget ? <SystemViewer3D target={selectedTarget} /> : null}
-                />
-              </div>
+              <SpaceStage
+                sky={<SkyViewerPanel target={selectedTarget} actionsRef={skyActionsRef} />}
+                system={selectedTarget ? <SystemViewer3D target={selectedTarget} /> : null}
+                showSkyRequest={skyFocusRequest}
+              />
               <TargetSearchPanel
                 mode={mode}
                 params={searchParams}

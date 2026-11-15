@@ -49,6 +49,18 @@ type ViewerPhase =
 
 interface SkyViewerPanelProps {
   target: ExoplanetDetail | null;
+  /**
+   * Lets other parts of the page (the guided path's "Share this world") reuse the same captioned
+   * PNG export. Filled on every render with the current state of the viewer.
+   */
+  actionsRef?: React.MutableRefObject<SkyViewerActions | null>;
+}
+
+export interface SkyViewerActions {
+  /** True once real sky tiles have arrived for the current target. */
+  canExport: boolean;
+  /** Saves the captioned PNG; resolves with the message shown to the user. */
+  exportPng: () => Promise<string>;
 }
 
 /**
@@ -82,7 +94,7 @@ function watchForTiles(baseUrl: string, onTile: () => void): () => void {
   };
 }
 
-export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
+export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target, actionsRef }) => {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const aladinRef = useRef<AladinInstance | null>(null);
@@ -365,9 +377,11 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     );
   };
 
-  const exportPng = async () => {
+  const exportPng = async (): Promise<string> => {
     const aladin = aladinRef.current;
-    if (!aladin || !target || phase !== 'ok') return;
+    if (!aladin || !target || phase !== 'ok') {
+      return 'The sky image has not loaded yet, so there is nothing to save. Open the sky view to check it.';
+    }
     setExporting(true);
     setExportNote(null);
     try {
@@ -404,17 +418,24 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
       a.click();
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-      setExportNote('Sky image saved. Survey, coordinates and capture time are printed under the image.');
+      const done = 'Sky image saved. Survey, coordinates and capture time are printed under the image.';
+      setExportNote(done);
+      return done;
     } catch (err) {
-      setExportNote(
-        `This browser blocked the image capture (${
-          err instanceof Error ? err.message : 'unknown reason'
-        }). Use “Open in Aladin Lite” for a shareable view, or download the view details as JSON.`
-      );
+      const blocked = `This browser blocked the image capture (${
+        err instanceof Error ? err.message : 'unknown reason'
+      }). Use “Open in Aladin Lite” for a shareable view, or download the view details as JSON.`;
+      setExportNote(blocked);
+      return blocked;
     } finally {
       setExporting(false);
     }
   };
+
+  // Refreshed after every render so callers always get the current viewer state.
+  useEffect(() => {
+    if (actionsRef) actionsRef.current = { canExport: !!target && phase === 'ok' && !exporting, exportPng };
+  });
 
   const permalink = aladinPermalink(ra, dec, fovDeg, survey.id);
   const hasCoords = ra !== null && dec !== null;
