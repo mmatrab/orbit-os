@@ -1,0 +1,35 @@
+name: Generate NASA exoplanet snapshot (one-time)
+
+# The snapshot is generated when this workflow file first arrives on main.
+# A snapshot commit does not match this path filter, so there is no push loop.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/nasa-snapshot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Get real NASA TAP data (no fixture or fallback)
+        run: node scripts/generate-snapshot.mjs
+      - name: Commit verified dated snapshot directly to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/snapshots/planets-*.json
+          git add public/data/snapshots/
+          git commit -m "data(story): snapshot real NASA pscomppars catalogue"
+          git push origin HEAD:main
