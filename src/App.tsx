@@ -147,27 +147,38 @@ export function App() {
     };
   }, [client, mode]);
 
+  // A previous NASA query must never replace results for a newer search or filter set.
+  const latestSearchRequest = useRef(0);
+
   const runSearch = useCallback(async () => {
+    const requestNo = ++latestSearchRequest.current;
     setSearchLoading(true);
     setSearchError(null);
     try {
       const res = await client.searchTargets(searchParams);
+      if (requestNo !== latestSearchRequest.current) return;
       setSearchItems(res.items);
       setSearchTotal(res.totalCount);
       // Keep the current target (e.g. one opened by deep link) even when it is not in this result page.
       setSelectedId((prevSelected) => prevSelected ?? res.items[0]?.id ?? null);
     } catch (err) {
+      if (requestNo !== latestSearchRequest.current) return;
       setSearchItems([]);
       setSearchTotal(0);
       setSearchError(err instanceof Error ? err.message : 'Failed to search catalog.');
     } finally {
-      setSearchLoading(false);
+      if (requestNo === latestSearchRequest.current) setSearchLoading(false);
     }
   }, [client, searchParams]);
 
   useEffect(() => {
+    // Invalidate in-flight requests immediately, even before the debounce timer fires.
+    latestSearchRequest.current += 1;
     const timer = window.setTimeout(runSearch, 200);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      latestSearchRequest.current += 1;
+    };
   }, [runSearch]);
 
   // Only the most recent selection may update the panel; a slow earlier response must not overwrite it.
