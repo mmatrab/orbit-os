@@ -30,6 +30,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f data/snapshots/planets-*.json
-          git add public/data/snapshots/
+          git add -f public/data/snapshots/
           git commit -m "data(story): snapshot real NASA pscomppars catalogue"
           git push origin HEAD:main
