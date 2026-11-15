@@ -98,15 +98,17 @@ export function FindAWorld({ target, onExploreSky }: FindAWorldProps) {
         <div
           className="relative mx-auto flex h-36 w-36 items-center justify-center rounded-full bg-[#0d1422]"
           role="img"
-          aria-label={hasValue && step === 0 ? 'Schematic size comparison: Earth and selected planet, not to scale in this panel' : 'Illustrative astronomy symbol, not a telescope photograph'}
+          aria-label={hasValue && step === 0 ? 'Two circles with radii proportional to Earth and the planet using the published radius' : 'Illustrative astronomy symbol, not a telescope photograph'}
         >
           {step === 0 ? (
-            <>
-              <div className="absolute left-5 top-11 h-9 w-9 rounded-full bg-blue-400/80 ring-1 ring-blue-200" />
-              <div className="absolute right-6 bottom-7 h-14 w-14 rounded-full bg-amber-300/70 ring-1 ring-amber-200" />
-              <span className="absolute left-4 bottom-6 text-[10px] text-slate-200">Earth</span>
-              <span className="absolute right-3 top-4 text-[10px] text-slate-200">Planet</span>
-            </>
+            usableRadius !== null ? (
+              <svg viewBox="0 0 180 140" className="h-full w-full" aria-hidden="true">
+                <circle cx="47" cy="64" r={36 / Math.max(1, usableRadius)} fill="#60a5fa" stroke="#bfdbfe" strokeWidth="1" />
+                <circle cx="129" cy="64" r={36 * usableRadius / Math.max(1, usableRadius)} fill="#fcd34d" stroke="#fef3c7" strokeWidth="1" />
+                <text x="47" y="122" fill="#e2e8f0" textAnchor="middle" fontSize="12">Earth</text>
+                <text x="129" y="122" fill="#e2e8f0" textAnchor="middle" fontSize="12">Planet</text>
+              </svg>
+            ) : <span className="text-5xl text-slate-400" aria-hidden="true">?</span>
           ) : step === 1 ? (
             <span className="text-5xl text-cyan-300" aria-hidden="true">✦</span>
           ) : (
@@ -120,7 +122,7 @@ export function FindAWorld({ target, onExploreSky }: FindAWorldProps) {
           <h3 className="text-lg font-medium text-slate-100">{QUESTIONS[step]}</h3>
           <p className="mt-2 text-sm leading-6 text-slate-200">{explanation}</p>
           {step === 0 && usableRadius !== null && (
-            <p className="mt-1 text-xs text-slate-400">The circles are illustrative, not a proportional size diagram.</p>
+            <p className="mt-1 text-xs text-slate-400">The circle radii show the relative sizes; colours are illustrative, not measured.</p>
           )}
           <p className="mt-2 text-xs text-slate-300">
             NASA Exoplanet Archive · pscomppars · {stepMeasurement.status === 'derived' ? 'derived value' : 'archive value'}
