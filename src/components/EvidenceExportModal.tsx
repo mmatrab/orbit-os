@@ -19,10 +19,6 @@ interface EvidenceExportModalProps {
   mode: DataSourceMode;
   notebookEntries: NotebookEntry[];
   sources: DataSourceStatus[];
-  onSubmitServerExport?: (
-    format: 'json' | 'csv' | 'markdown',
-    entryIds: string[]
-  ) => Promise<string | null>;
   onClose: () => void;
 }
 
@@ -32,7 +28,6 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
   mode,
   notebookEntries,
   sources,
-  onSubmitServerExport,
   onClose,
 }) => {
   const [format, setFormat] = useState<'json' | 'csv' | 'markdown'>('json');
@@ -83,15 +78,7 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
 
       triggerTextDownload(`orbit-os_${safeSlug}_evidence.${ext}`, previewText, mime);
 
-      if (mode === 'live' && onSubmitServerExport) {
-        const receipt = await onSubmitServerExport(
-          format,
-          selectedNotes.map((n) => n.id)
-        );
-        if (receipt) {
-          setArchiveStatus(`Export audit ID recorded on backend: ${receipt}`);
-        }
-      }
+      setArchiveStatus(`Downloaded orbit-os_${safeSlug}_evidence.${ext}`);
     } finally {
       setSubmitting(false);
     }
@@ -110,7 +97,7 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
       <div className="w-full max-w-3xl max-h-[90vh] flex flex-col bg-[#0F151E] border border-slate-700 rounded overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
           <h2 id="export-modal-title" className="text-xs font-semibold tracking-wide text-slate-100">
-            Evidence Bundle Export — {target.planetName}
+            Export {target.planetName}
           </h2>
           <button
             type="button"
@@ -131,9 +118,9 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
                 onChange={(e) => setFormat(e.target.value as 'json' | 'csv' | 'markdown')}
                 className="px-2.5 py-1.5 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
               >
-                <option value="json">JSON (Full Provenance Schema v1)</option>
-                <option value="csv">CSV (Parameter Table, RFC 4180)</option>
-                <option value="markdown">Markdown (Observatory Brief &amp; Citations)</option>
+                <option value="json">JSON — complete record with sources (for code)</option>
+                <option value="csv">CSV — one row per value (for Excel / analysis)</option>
+                <option value="markdown">Markdown — readable report with references</option>
               </select>
             </label>
 
@@ -145,8 +132,7 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
                 className="accent-cyan-400"
               />
               <span>
-                Include all notebook entries ({notebookEntries.length}) instead of target-only (
-                {targetNoteCount})
+                Include all my notes ({notebookEntries.length}), not only the ones on this planet ({targetNoteCount})
               </span>
             </label>
           </div>
@@ -176,7 +162,7 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
               className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-50 transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Download .{format === 'markdown' ? 'md' : format} Bundle</span>
+              <span>Download .{format === 'markdown' ? 'md' : format}</span>
             </button>
           </div>
         </div>

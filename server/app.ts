@@ -15,6 +15,7 @@ import type { SpaceExplorerConfig } from './config.ts';
 import {
   configureNasaTap,
   getNasaExoplanetDetail,
+  getTapStats,
   probeDataSources,
   searchNasaExoplanets,
   UpstreamTapError,
@@ -28,7 +29,7 @@ import {
   updateNotebookEntry,
 } from './notebookStore.ts';
 
-export const MODULE_VERSION = '1.1.0';
+export const MODULE_VERSION = '1.2.0';
 
 const NOTEBOOK_CATEGORIES: ReadonlySet<NotebookCategory> = new Set([
   'Target Screening',
@@ -154,6 +155,8 @@ export function createApiRouter(config: SpaceExplorerConfig): Router {
       service: 'orbit-space-explorer',
       version: MODULE_VERSION,
       timestampUtc: new Date().toISOString(),
+      notebookStorage: config.notebookMode,
+      archiveRequests: getTapStats(),
     };
     res.json(payload);
   });
@@ -209,6 +212,22 @@ export function createApiRouter(config: SpaceExplorerConfig): Router {
       sendUpstreamError(res, err, 'Failed to probe astronomical data sources.');
     }
   });
+
+  // Shared server-side notes are opt-in: without authentication in front of the module they would be
+  // a publicly writable notebook. By default notes stay in each visitor's browser.
+  const serverStorageOnly = (_req: Request, res: Response, next: NextFunction) => {
+    if (config.notebookMode !== 'server') {
+      res.status(403).json({
+        error:
+          'Server-side notebook is disabled. Notes are stored in each visitor\'s browser ' +
+          '(set ORBIT_NOTEBOOK_MODE=server only behind your platform\'s authentication).',
+      });
+      return;
+    }
+    next();
+  };
+  api.use('/v1/notebook', serverStorageOnly);
+  api.use('/v1/exports', serverStorageOnly);
 
   api.get('/v1/notebook/entries', async (req, res, next) => {
     try {

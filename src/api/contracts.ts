@@ -200,6 +200,13 @@ export interface HealthResponse {
   service: string;
   version: string;
   timestampUtc: string;
+  /**
+   * 'browser': notes are kept privately in each visitor's browser (default).
+   * 'server': notes are stored in one shared server notebook (only behind host authentication).
+   */
+  notebookStorage: 'browser' | 'server';
+  /** Since process start: requests actually sent to NASA vs answers served from the in-memory cache. */
+  archiveRequests?: { upstreamRequests: number; cacheHits: number; sharedInFlight: number; cachedQueries: number };
 }
 
 export interface ExportSubmissionRequest {

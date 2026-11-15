@@ -13,6 +13,8 @@ import { formatUtcTimestamp } from '../utils/coordinates';
 
 interface ResearchNotebookPanelProps {
   mode: DataSourceMode;
+  /** Where notes are persisted: this browser only (default) or the deployment's shared server notebook. */
+  storage: 'browser' | 'server';
   activeTarget: ExoplanetDetail | null;
   entries: NotebookEntry[];
   pendingSnapshot: ParameterSnapshot | null;
@@ -32,6 +34,7 @@ const CATEGORIES: NotebookCategory[] = [
 
 export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
   mode,
+  storage,
   activeTarget,
   entries,
   pendingSnapshot,
@@ -148,11 +151,17 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
       aria-labelledby="notebook-title"
     >
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
-        <h2 id="notebook-title" className="text-xs font-semibold tracking-wide text-slate-100">
-          Observation &amp; Research Notebook
+        <h2 id="notebook-title" className="text-sm font-semibold text-slate-100">
+          My notes
         </h2>
-        <span className="font-mono text-[11px] text-slate-400">
-          Storage: Space Explorer server (unsynced entries stay in this browser)
+        <span className="text-[11px] text-slate-400" title={
+          storage === 'server'
+            ? 'This deployment stores notes on its server for every signed-in user of the host platform.'
+            : 'Notes are saved only in this browser on this device. Nobody else can see them; clearing site data deletes them. Export them to keep a copy.'
+        }>
+          {storage === 'server'
+            ? 'Saved on this deployment’s shared server notebook'
+            : 'Saved privately in this browser only — export to keep a copy'}
         </span>
       </div>
 
@@ -162,8 +171,8 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-semibold text-cyan-300">
               {editingId
-                ? 'Edit Observation Entry'
-                : `New Observation Log (${activeTarget ? activeTarget.planetName : 'General'})`}
+                ? 'Edit note'
+                : `New note${activeTarget ? ` on ${activeTarget.planetName}` : ''}`}
             </h3>
             {editingId && (
               <button
@@ -178,7 +187,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
 
           {!editingId && pendingSnapshot && (
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded border border-emerald-500/40 bg-emerald-950/25 text-xs text-emerald-200">
-              <span>Attached snapshot: {pendingSnapshot.planetName}</span>
+              <span>Planet values attached: {pendingSnapshot.planetName}</span>
               <button
                 type="button"
                 onClick={onClearPendingSnapshot}
@@ -205,34 +214,34 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
           </label>
 
           <label className="text-xs text-slate-300">
-            <span className="block mb-1">Entry Title</span>
+            <span className="block mb-1">Title</span>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Check Gaia DR3 astrometric blending near host"
+              placeholder="e.g. Compare mass with the newer paper"
               required
               className="w-full px-2.5 py-2 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
             />
           </label>
 
           <label className="text-xs text-slate-300">
-            <span className="block mb-1">Scientific Notes (Plain text / Markdown)</span>
+            <span className="block mb-1">Note</span>
             <textarea
               rows={6}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Record sky survey inspection, literature discrepancies, or follow-up rationale…"
+              placeholder="What did you notice? What should be checked next?"
               required
               className="w-full px-2.5 py-2 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
             />
           </label>
 
           <label className="text-xs text-slate-300">
-            <span className="block mb-1">Tags (comma-separated)</span>
+            <span className="block mb-1">Tags <span className="text-slate-500">(optional, separated by commas)</span></span>
             <input
               value={tagsRaw}
               onChange={(e) => setTagsRaw(e.target.value)}
-              placeholder="jwst-cycle, hz, rv-pending"
+              placeholder="follow-up, radius"
               className="w-full px-2.5 py-2 text-xs font-mono bg-[#07090E] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
             />
           </label>
@@ -254,8 +263,8 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
             {submitting
               ? 'Saving…'
               : editingId
-              ? 'Save Entry Changes'
-              : 'Record UTC Log Entry'}
+              ? 'Save changes'
+              : 'Save note'}
           </button>
         </form>
 
@@ -263,7 +272,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
             <h3 className="text-xs font-semibold text-cyan-300">
-              Recorded Entries ({visibleEntries.length})
+              Your notes ({visibleEntries.length})
             </h3>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -313,8 +322,8 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
           {visibleEntries.length === 0 ? (
             <div className="p-6 rounded border border-dashed border-slate-700 text-center text-xs text-slate-400">
               {entries.length === 0
-                ? 'No observation log entries recorded yet.'
-                : 'No entries match the current filter.'}
+                ? 'No notes yet. Open a planet and click “Save to notes” to start one.'
+                : 'No notes match this filter.'}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -336,8 +345,8 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
                           {entry.syncState === 'synced'
                             ? 'Synced'
                             : entry.syncState === 'sync_error'
-                            ? 'Sync Pending'
-                            : 'Local Only'}
+                            ? 'Not yet saved to server'
+                            : 'This browser'}
                         </span>
                       </div>
                       <h4 className="text-[13px] font-semibold text-slate-100">{entry.title}</h4>

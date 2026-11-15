@@ -19,18 +19,26 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
   onPickExample,
 }) => (
   <section
-    className="mb-4 p-5 rounded border border-slate-800 bg-[#0F151E]"
+    className="mb-4 px-5 py-4 rounded border border-slate-800 bg-[#0F151E]"
     aria-labelledby="intro-title"
   >
-    <h1 id="intro-title" className="text-lg font-semibold text-slate-100">
-      Explore confirmed exoplanets
+    <h1 id="intro-title" className="text-xl sm:text-2xl font-semibold text-slate-50">
+      Explore worlds beyond our Solar System
     </h1>
-    <p className="mt-1 text-sm text-slate-400 max-w-3xl">
-      Search NASA&apos;s catalogue of planets beyond our Solar System, see where their star sits in
-      the sky, and check every number against the paper it comes from.
+    <p className="mt-1.5 text-sm text-slate-300 max-w-3xl">
+      Every planet here is a confirmed exoplanet from the{' '}
+      <a
+        href="https://exoplanetarchive.ipac.caltech.edu/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-cyan-300 underline decoration-cyan-700 underline-offset-2 hover:text-cyan-200"
+      >
+        NASA Exoplanet Archive
+      </a>
+      , fetched live, with the paper behind every number. Search a planet, then explore its star in real sky images.
     </p>
 
-    <div className="mt-4 relative max-w-2xl">
+    <div className="mt-3 relative max-w-2xl">
       <Search
         className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
         aria-hidden="true"
@@ -45,12 +53,18 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
         placeholder="Search a planet or star, e.g. TRAPPIST-1"
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
-        className="w-full pl-10 pr-3 py-3 text-base bg-[#07090E] border border-slate-600 rounded text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
+        className="w-full pl-10 pr-10 py-3 text-base bg-[#07090E] border border-slate-600 rounded text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
       />
+      <kbd
+        className="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 px-1.5 rounded border border-slate-700 text-[11px] text-slate-500 font-mono"
+        title="Press / anywhere to jump to the search"
+      >
+        /
+      </kbd>
     </div>
 
     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-      <span>Try:</span>
+      <span>Try a real planet:</span>
       {EXAMPLES.map((name) => (
         <button
           key={name}
@@ -61,7 +75,6 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
           {name}
         </button>
       ))}
-      <span className="ml-auto font-mono text-[10px] text-slate-500">Shortcut: /</span>
     </div>
   </section>
 );

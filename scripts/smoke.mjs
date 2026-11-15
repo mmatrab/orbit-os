@@ -64,26 +64,38 @@ await check('embed script is served', async () => {
   assert((await res.text()).includes("customElements.define('orbit-space-explorer'"), 'unexpected content');
 });
 
-await check('notebook create / list / delete', async () => {
-  const headers = { 'Content-Type': 'application/json' };
-  const created = await get('api/v1/notebook/entries', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      targetId: 'SMOKE-TEST',
-      targetName: 'SMOKE-TEST',
-      category: 'Target Screening',
-      title: 'smoke test',
-      body: 'Created and deleted by scripts/smoke.mjs',
-    }),
+const health = await (await get('api/v1/health')).json().catch(() => ({}));
+
+if (health.notebookStorage === 'server') {
+  await check('shared server notebook create / list / delete (ORBIT_NOTEBOOK_MODE=server)', async () => {
+    const headers = { 'Content-Type': 'application/json' };
+    const created = await get('api/v1/notebook/entries', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        targetId: 'SMOKE-TEST',
+        targetName: 'SMOKE-TEST',
+        category: 'Target Screening',
+        title: 'smoke test',
+        body: 'Created and deleted by scripts/smoke.mjs',
+      }),
+    });
+    assert(created.status === 201, `create HTTP ${created.status}`);
+    const entry = await created.json();
+    const list = await (await get('api/v1/notebook/entries?targetId=SMOKE-TEST')).json();
+    assert(list.some((e) => e.id === entry.id), 'created entry not listed');
+    const deleted = await get(`api/v1/notebook/entries/${entry.id}`, { method: 'DELETE' });
+    assert(deleted.status === 204, `delete HTTP ${deleted.status}`);
   });
-  assert(created.status === 201, `create HTTP ${created.status}`);
-  const entry = await created.json();
-  const list = await (await get('api/v1/notebook/entries?targetId=SMOKE-TEST')).json();
-  assert(list.some((e) => e.id === entry.id), 'created entry not listed');
-  const deleted = await get(`api/v1/notebook/entries/${entry.id}`, { method: 'DELETE' });
-  assert(deleted.status === 204, `delete HTTP ${deleted.status}`);
-});
+} else {
+  await check('notes are private to each browser (server notebook disabled)', async () => {
+    const res = await get('api/v1/notebook/entries');
+    assert(res.status === 403, `expected 403, got HTTP ${res.status}`);
+    return 'notebookStorage=browser';
+  });
+}
+
+const stats = async () => (await (await get('api/v1/health')).json()).archiveRequests;
 
 if (offline) {
   console.log('SKIP  live NASA Exoplanet Archive checks (--offline)');
@@ -96,11 +108,26 @@ if (offline) {
   });
 
   await check('live archive planet record (TRAPPIST-1 e)', async () => {
+    const before = await stats();
     const res = await get(`api/v1/exoplanets/${encodeURIComponent('TRAPPIST-1 e')}`);
     const body = await readJson(res);
+    const after = await stats();
     assert(typeof body.hostStar.raDeg === 'number', 'no host coordinates');
     assert(body.orbitalParameters.periodDays.value !== null, 'no orbital period');
-    return `period ${body.orbitalParameters.periodDays.value} ${body.orbitalParameters.periodDays.unit}`;
+    const source =
+      after.upstreamRequests > before.upstreamRequests
+        ? 'fresh request to NASA'
+        : 'served from the server cache (no new NASA request)';
+    return `period ${body.orbitalParameters.periodDays.value} ${body.orbitalParameters.periodDays.unit}; ${source}`;
+  });
+
+  await check('repeat request is served from cache', async () => {
+    const before = await stats();
+    await readJson(await get(`api/v1/exoplanets/${encodeURIComponent('TRAPPIST-1 e')}`));
+    const after = await stats();
+    assert(after.upstreamRequests === before.upstreamRequests, 'repeat request went upstream');
+    assert(after.cacheHits > before.cacheHits, 'no cache hit recorded');
+    return `upstream total ${after.upstreamRequests}, cache hits ${after.cacheHits}`;
   });
 }
 
