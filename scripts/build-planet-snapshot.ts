@@ -48,7 +48,13 @@ async function main() {
   const res = await fetch(url, { headers: { 'User-Agent': 'ORBIT-OS-Space-Explorer/1.0 (snapshot script)' } });
   if (!res.ok) throw new Error(`NASA TAP answered HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const raw = (await res.json()) as Record<string, unknown>[];
-  if (!Array.isArray(raw) || raw.length === 0) throw new Error('NASA TAP returned no rows; refusing to write an empty snapshot.');
+  // Fail closed: an empty, truncated or duplicated answer never becomes a snapshot.
+  if (!Array.isArray(raw) || raw.length < 1000) {
+    throw new Error(`NASA TAP returned ${Array.isArray(raw) ? raw.length : 'no'} rows; expected thousands. No snapshot written.`);
+  }
+  const names = raw.map((r) => (typeof r.pl_name === 'string' ? r.pl_name.trim() : ''));
+  if (names.some((n) => !n)) throw new Error('NASA TAP returned a planet without a name. No snapshot written.');
+  if (new Set(names).size !== names.length) throw new Error('NASA TAP returned duplicate planet names. No snapshot written.');
 
   const columns = [
     'planetName',
