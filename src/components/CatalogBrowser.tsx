@@ -114,8 +114,7 @@ export function CatalogBrowser({
                   category === item.key
                     ? 'border-cyan-400 bg-cyan-400/10 text-cyan-100'
                     : 'border-slate-600 text-slate-300 hover:border-cyan-500 hover:text-slate-100'
-                } ${!snapshot && item.key !== 'nearby' ? 'opacity-45 cursor-not-allowed' : ''}
-                }`}>
+                } ${!snapshot && item.key !== 'nearby' ? 'opacity-45 cursor-not-allowed' : ''}`}>
                 {item.label}
               </button>
             ))}
