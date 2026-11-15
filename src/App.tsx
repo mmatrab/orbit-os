@@ -353,29 +353,35 @@ export function App() {
       <main id="main-workspace" className="flex-1 w-full max-w-[1400px] mx-auto p-4 lg:p-6">
         {activeTab === 'explorer' && (
           <>
-          <IntroSearch
-            query={searchParams.q ?? ''}
-            searchInputRef={searchInputRef}
-            onQueryChange={(q) => setSearchParams((prev) => ({ ...prev, q }))}
-            onPickExample={(name) => {
-              const next = pickExample(searchParams, name);
-              setSearchParams({ ...next.params, discoveryMethod: 'ALL', requireRadius: false, requireMass: false });
-              setSelectedId(next.selectedId);
-            }}
-            discoveryMethod={searchParams.discoveryMethod ?? 'ALL'}
-            onDiscoveryMethodChange={(method) =>
-              setSearchParams((prev) => ({ ...prev, discoveryMethod: method }))
-            }
-            snapshot={discoverySnapshot}
-            liveItems={searchItems}
-            loading={searchLoading || snapshotState.phase === 'loading'}
-            error={searchError}
-          />
-          <FindAWorld
-            key={selectedTarget?.id ?? 'none'}
-            target={selectedTarget}
-            onExploreSky={() => document.getElementById('sky-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          />
+          <div className="relative mb-4 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-4">
+            <div className="relative z-20 min-w-0">
+            <IntroSearch
+              query={searchParams.q ?? ''}
+              searchInputRef={searchInputRef}
+              onQueryChange={(q) => setSearchParams((prev) => ({ ...prev, q }))}
+              onPickExample={(name) => {
+                const next = pickExample(searchParams, name);
+                setSearchParams({ ...next.params, discoveryMethod: 'ALL', requireRadius: false, requireMass: false });
+                setSelectedId(next.selectedId);
+              }}
+              discoveryMethod={searchParams.discoveryMethod ?? 'ALL'}
+              onDiscoveryMethodChange={(method) =>
+                setSearchParams((prev) => ({ ...prev, discoveryMethod: method }))
+              }
+              snapshot={discoverySnapshot}
+              liveItems={searchItems}
+              loading={searchLoading || snapshotState.phase === 'loading'}
+              error={searchError}
+            />
+            </div>
+            <div className="relative z-10 min-w-0">
+            <FindAWorld
+              key={selectedTarget?.id ?? 'none'}
+              target={selectedTarget}
+              onExploreSky={() => document.getElementById('sky-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            />
+            </div>
+          </div>
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] gap-4 items-start">
             {/* Left: the picture of the star and planet, then the list of planets to pick from. */}
             <div className="flex flex-col gap-4 min-w-0">
