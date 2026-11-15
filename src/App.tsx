@@ -23,10 +23,12 @@ import { SpaceStage } from './components/SpaceStage';
 import { FindAWorld } from './components/FindAWorld';
 import { SnapshotWorldGuide, SnapshotOverview } from './components/SnapshotWorldGuide';
 import { StoryCharts } from './components/StoryCharts';
+import { ScienceLearnPage } from './components/ScienceLearnPage';
 import { SystemViewer3D } from './components/SystemViewer3D';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
 import { pickExample } from './utils/examplePick';
 import { useSnapshot } from './stories/useSnapshot';
+import { startsOnLearnPage, workspaceHref } from './utils/workspaceNavigation';
 
 const DEFAULT_TARGET = 'TRAPPIST-1 e';
 
@@ -52,7 +54,28 @@ function makeId(): string {
 
 export function App() {
   const mode: DataSourceMode = 'live';
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('explorer');
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(
+    () => startsOnLearnPage(window.location.search) ? 'learn' : 'explorer'
+  );
+
+  const navigateTab = useCallback((tab: WorkspaceTab) => {
+    setActiveTab(tab);
+    const next = workspaceHref(window.location.href, tab);
+    if (window.location.pathname + window.location.search + window.location.hash !== next) {
+      window.history.pushState(null, '', next);
+    }
+    if (tab === 'learn' || tab === 'explorer') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const onNavigation = () => {
+      setActiveTab(startsOnLearnPage(window.location.search) ? 'learn' : 'explorer');
+    };
+    window.addEventListener('popstate', onNavigation);
+    return () => window.removeEventListener('popstate', onNavigation);
+  }, []);
   const [planetTab, setPlanetTab] = useState<PlanetTab>('overview');
 
   // The sky canvas measured 0×0 while hidden; let Aladin re-measure when it is shown again.
@@ -68,7 +91,7 @@ export function App() {
   const discoverySnapshot = snapshotState.phase === 'ready' ? snapshotState.snapshot : null;
 
   const openMainSearch = () => {
-    setActiveTab('explorer');
+    navigateTab('explorer');
     window.requestAnimationFrame(() => {
       searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       searchInputRef.current?.focus({ preventScroll: true });
@@ -361,7 +384,7 @@ export function App() {
         health={health}
         healthError={healthError}
         selectedTarget={selectedTarget}
-        onSelectTab={setActiveTab}
+        onSelectTab={navigateTab}
         onOpenSearch={openMainSearch}
       />
 
@@ -448,7 +471,7 @@ export function App() {
             </div>
           </div>
 
-          <StoryCharts />
+          <StoryCharts onLearnScience={() => navigateTab('learn')} />
 
           {planetTab === 'data' && (
             <div className="mt-4">
@@ -464,6 +487,15 @@ export function App() {
             </div>
           )}
           </>
+        )}
+
+        {activeTab === 'learn' && (
+          <ScienceLearnPage onBack={() => {
+            navigateTab('explorer');
+            window.requestAnimationFrame(() =>
+              document.getElementById('story-charts-heading')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            );
+          }} />
         )}
 
         {activeTab === 'notebook' && (
