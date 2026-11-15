@@ -56,7 +56,7 @@ export function buildDiscoveryPicks(
     // Radius range is a human-readable browsing filter, not a claim of Earth similarity.
     // A limit flagged by the NASA archive cannot be treated as an exact radius.
     const sizes = eligible.filter((p) =>
-      p.radiusStatus === 'm' &&
+      p.radiusStatus !== 'l' &&
       p.radiusEarth !== null &&
       Number.isFinite(p.radiusEarth) &&
       p.radiusEarth >= 0.8 &&
@@ -66,7 +66,7 @@ export function buildDiscoveryPicks(
     return uniqueHosts(sizes, limit).map((p) => ({
       planetName: p.planetName,
       title: p.planetName,
-      description: `${p.radiusEarth} Earth radii · measured radius`,
+      description: `${p.radiusEarth} Earth radii · reported archive radius (measurement type not specified)`,
       distancePc: p.distancePc,
     }));
   }
