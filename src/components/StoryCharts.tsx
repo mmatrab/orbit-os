@@ -152,9 +152,12 @@ function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
       </h3>
       <p className="mt-1 text-xs text-slate-300">
         NASA Exoplanet Archive · pscomppars · Snapshot {snapshot.retrievedAtUtc.slice(0,10)} ·
-        {' '}{plotted.length.toLocaleString()} plotted · {excluded.toLocaleString()} excluded (missing or non-positive radius/period)
+        {' '}{plotted.length.toLocaleString()} plotted · {excluded.toLocaleString()} excluded (missing, non-positive or NASA limit-flagged radius/period)
       </p>
-      <p className="mt-1 text-xs text-slate-400">Both axes use logarithmic spacing. The highlighted radius range (1.5–2 Earth radii) is a region researchers study; it is not a habitability indicator.</p>
+      <p className="mt-1 text-xs text-slate-400">
+        Both axes use logarithmic spacing. The shaded region marks the 1.5–2 Earth-radii gap studied mainly for short-period planets (under ~100 days), not a habitability indicator. Orbital period is not the same as distance from the star.{' '}
+        <a href="https://science.nasa.gov/exoplanets/terrestrial/" target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline">NASA explanation of the radius gap</a>.
+      </p>
       <div className="mt-2 flex flex-wrap gap-2">
         {DISCOVERY_METHODS.map((method) => (
           <button key={method} type="button" aria-pressed={shown.includes(method)}
@@ -183,9 +186,23 @@ function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
       ) : (
         <div className="mt-3 overflow-x-auto">
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[600px]" role="img" aria-label="Logarithmic scatter chart of planet orbital period versus planet radius. Open the accessible table for exact numbers.">
-            <rect x={L} y={gapY} width={W-L-R} height={Math.max(0,gapH)} fill="#fbbf24" opacity="0.12" />
+            <rect x={L} y={gapY} width={Math.max(0, x(100) - L)} height={Math.max(0,gapH)} fill="#fbbf24" opacity="0.12" />
             <line x1={L} x2={W-R} y1={H-B} y2={H-B} stroke="#94a3b8" />
             <line x1={L} x2={L} y1={T} y2={H-B} stroke="#94a3b8" />
+            {Array.from({ length: Math.floor(maxX) - Math.ceil(minX) + 1 }, (_, i) => i + Math.ceil(minX)).map((power) => {
+              const value = 10 ** power;
+              return <g key={`x-${power}`}>
+                <line x1={x(value)} x2={x(value)} y1={H-B} y2={H-B+5} stroke="#94a3b8" />
+                <text x={x(value)} y={H-B+17} fill="#cbd5e1" fontSize="10" textAnchor="middle">{value.toLocaleString('en-US', { maximumFractionDigits: 4 })}</text>
+              </g>;
+            })}
+            {Array.from({ length: Math.floor(maxY) - Math.ceil(minY) + 1 }, (_, i) => i + Math.ceil(minY)).map((power) => {
+              const value = 10 ** power;
+              return <g key={`y-${power}`}>
+                <line x1={L-4} x2={L} y1={y(value)} y2={y(value)} stroke="#94a3b8" />
+                <text x={L-7} y={y(value)+3} fill="#cbd5e1" fontSize="10" textAnchor="end">{value.toLocaleString('en-US', { maximumFractionDigits: 4 })}</text>
+              </g>;
+            })}
             {valid.map((p) => {
               const method = (DISCOVERY_METHODS as readonly string[]).includes(p.discoveryMethod)
                 ? p.discoveryMethod as DiscoveryCategory : 'Other';
