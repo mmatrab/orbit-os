@@ -142,15 +142,22 @@ function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
   const maxX = Math.max(3, ...years, Math.log10(365.25));
   const minY = Math.min(-1, ...radii, 0);
   const maxY = Math.max(1, ...radii, 0);
-  const x = (v: number) => L + (Math.log10(v) - minX) / (maxX - minX || 1) * (W-L-R);
-  const y = (v: number) => T + (maxY - Math.log10(v)) / (maxY - minY || 1) * (H-T-B);
+  // Reserve a dedicated left margin for the rotated axis title and tick labels.
+  // The title previously occupied the plot area and overlapped plotted planets.
+  const PLOT_LEFT = 78;
+  const PLOT_TOP = 22;
+  const PLOT_BOTTOM = 46;
+  const PLOT_WIDTH = W - PLOT_LEFT - R;
+  const PLOT_HEIGHT = H - PLOT_TOP - PLOT_BOTTOM;
+  const x = (v: number) => PLOT_LEFT + (Math.log10(v) - minX) / (maxX - minX || 1) * PLOT_WIDTH;
+  const y = (v: number) => PLOT_TOP + (maxY - Math.log10(v)) / (maxY - minY || 1) * PLOT_HEIGHT;
   const gapY = y(2);
   const gapH = y(1.5) - y(2);
 
   return (
     <section aria-labelledby="story-scatter-title" className="rounded border border-slate-700 bg-[#161e2c] p-4">
       <h3 id="story-scatter-title" className="text-base font-semibold text-slate-50">
-        Where are the Earth-sized planets, and how close are they to their stars?
+        How do exoplanet sizes compare with their orbital periods?
       </h3>
       <p className="mt-1 text-xs text-slate-300">
         NASA Exoplanet Archive · pscomppars · Snapshot {snapshot.retrievedAtUtc.slice(0,10)} ·
@@ -188,21 +195,21 @@ function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
       ) : (
         <div className="mt-3 overflow-x-auto">
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[600px]" role="img" aria-label="Logarithmic scatter chart of planet orbital period versus planet radius. Open the accessible table for exact numbers.">
-            <rect x={L} y={gapY} width={Math.max(0, x(100) - L)} height={Math.max(0,gapH)} fill="#fbbf24" opacity="0.12" />
-            <line x1={L} x2={W-R} y1={H-B} y2={H-B} stroke="#94a3b8" />
-            <line x1={L} x2={L} y1={T} y2={H-B} stroke="#94a3b8" />
+            <rect x={PLOT_LEFT} y={gapY} width={Math.max(0, x(100) - PLOT_LEFT)} height={Math.max(0,gapH)} fill="#fbbf24" opacity="0.12" />
+            <line x1={PLOT_LEFT} x2={W-R} y1={H-PLOT_BOTTOM} y2={H-PLOT_BOTTOM} stroke="#94a3b8" />
+            <line x1={PLOT_LEFT} x2={PLOT_LEFT} y1={PLOT_TOP} y2={H-PLOT_BOTTOM} stroke="#94a3b8" />
             {Array.from({ length: Math.floor(maxX) - Math.ceil(minX) + 1 }, (_, i) => i + Math.ceil(minX)).map((power) => {
               const value = 10 ** power;
               return <g key={`x-${power}`}>
-                <line x1={x(value)} x2={x(value)} y1={H-B} y2={H-B+5} stroke="#94a3b8" />
-                <text x={x(value)} y={H-B+17} fill="#cbd5e1" fontSize="10" textAnchor="middle">{value.toLocaleString('en-US', { maximumFractionDigits: 4 })}</text>
+                <line x1={x(value)} x2={x(value)} y1={H-PLOT_BOTTOM} y2={H-PLOT_BOTTOM+5} stroke="#94a3b8" />
+                <text x={x(value)} y={H-PLOT_BOTTOM+17} fill="#cbd5e1" fontSize="10" textAnchor="middle">{value.toLocaleString('en-US', { maximumFractionDigits: 4 })}</text>
               </g>;
             })}
             {Array.from({ length: Math.floor(maxY) - Math.ceil(minY) + 1 }, (_, i) => i + Math.ceil(minY)).map((power) => {
               const value = 10 ** power;
               return <g key={`y-${power}`}>
-                <line x1={L-4} x2={L} y1={y(value)} y2={y(value)} stroke="#94a3b8" />
-                <text x={L-7} y={y(value)+3} fill="#cbd5e1" fontSize="10" textAnchor="end">{value.toLocaleString('en-US', { maximumFractionDigits: 4 })}</text>
+                <line x1={PLOT_LEFT-4} x2={PLOT_LEFT} y1={y(value)} y2={y(value)} stroke="#94a3b8" />
+                <text x={PLOT_LEFT-10} y={y(value)+3} fill="#cbd5e1" fontSize="10" textAnchor="end">{value.toLocaleString('en-US', { maximumFractionDigits: 4 })}</text>
               </g>;
             })}
             {valid.map((p) => {
@@ -214,8 +221,9 @@ function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
             })}
             <circle cx={x(365.25)} cy={y(1)} r="6" fill="none" stroke="#ffffff" strokeWidth="2" />
             <text x={x(365.25) + 9} y={y(1) - 9} fill="#ffffff" fontSize="12">Earth (reference)</text>
-            <text x={W/2} y={H-4} fill="#cbd5e1" fontSize="12" textAnchor="middle">Orbital period (Earth days, log scale)</text>
-            <text x="12" y="16" fill="#cbd5e1" fontSize="12">Radius (Earth radii, log)</text>
+            <text x={(PLOT_LEFT + W - R)/2} y={H-4} fill="#cbd5e1" fontSize="12" textAnchor="middle">Orbital period (days, log scale)</text>
+            <text x="18" y={PLOT_TOP + PLOT_HEIGHT / 2} transform={`rotate(-90 18 ${PLOT_TOP + PLOT_HEIGHT / 2})`}
+              fill="#cbd5e1" fontSize="12" textAnchor="middle">Planet radius (Earth = 1, log scale)</text>
           </svg>
         </div>
       )}
