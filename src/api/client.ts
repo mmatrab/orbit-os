@@ -39,7 +39,7 @@ export class OrbitApiClient {
   private baseUrl: string;
 
   constructor(config: OrbitClientConfig = {}) {
-    this.timeoutMs = config.timeoutMs ?? 15000;
+    this.timeoutMs = config.timeoutMs ?? 28000;
     this.baseUrl = config.baseUrl ?? new URL('./', document.baseURI).toString();
   }
 
