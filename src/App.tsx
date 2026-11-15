@@ -21,6 +21,7 @@ import { ResearchNotebookPanel } from './components/ResearchNotebookPanel';
 import { SkyViewerPanel } from './components/SkyViewerPanel';
 import { SpaceStage } from './components/SpaceStage';
 import { FindAWorld } from './components/FindAWorld';
+import { SnapshotWorldGuide, SnapshotOverview } from './components/SnapshotWorldGuide';
 import { StoryCharts } from './components/StoryCharts';
 import { SystemViewer3D } from './components/SystemViewer3D';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
@@ -102,6 +103,11 @@ export function App() {
   const [notebookEntries, setNotebookEntries] = useState<NotebookEntry[]>(loadLocalNotebook);
   const [pendingSnapshot, setPendingSnapshot] = useState<ParameterSnapshot | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const currentTarget = selectedTarget?.id === selectedId ? selectedTarget : null;
+  const snapshotPlanet = useMemo(
+    () => discoverySnapshot?.planets.find((planet) => planet.planetName === selectedId) ?? null,
+    [discoverySnapshot, selectedId]
+  );
 
   // Global `/` shortcut to focus search input when on Explorer tab
   useEffect(() => {
@@ -372,11 +378,23 @@ export function App() {
             />
             </div>
             <div className="relative z-10 min-w-0">
-            <FindAWorld
-              key={selectedTarget?.id ?? 'none'}
-              target={selectedTarget}
-              onExploreSky={() => document.getElementById('sky-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            />
+            {currentTarget ? (
+              <FindAWorld
+                key={currentTarget.id}
+                target={currentTarget}
+                onExploreSky={() => document.getElementById('sky-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              />
+            ) : (
+              <SnapshotWorldGuide
+                key={selectedId ?? 'none'}
+                planet={snapshotPlanet}
+                planetName={selectedId}
+                snapshotDate={discoverySnapshot?.retrievedAtUtc.slice(0, 10) ?? null}
+                loading={detailLoading || snapshotState.phase === 'loading'}
+                error={detailError}
+                onRetry={loadSelectedTarget}
+              />
+            )}
             </div>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] gap-4 items-start">
@@ -384,8 +402,8 @@ export function App() {
             <div className="flex flex-col gap-4 min-w-0">
               <div id="sky-stage">
                 <SpaceStage
-                  sky={<SkyViewerPanel target={selectedTarget} />}
-                  system={selectedTarget ? <SystemViewer3D target={selectedTarget} /> : null}
+                  sky={<SkyViewerPanel target={currentTarget} />}
+                  system={currentTarget ? <SystemViewer3D target={currentTarget} /> : null}
                 />
               </div>
 
@@ -393,17 +411,27 @@ export function App() {
 
             {/* Right: the numbers for the selected planet, kept in view while scrolling. */}
             <div className="flex flex-col gap-4 min-w-0 xl:sticky xl:top-4">
-              <ExoplanetDetailPanel
-                mode={mode}
-                target={selectedTarget}
-                loading={detailLoading}
-                error={detailError}
-                onPinToNotebook={pinToNotebook}
-                onRetry={loadSelectedTarget}
-                onOpenExport={() => setExportOpen(true)}
-                planetTab={planetTab}
-                onPlanetTabChange={setPlanetTab}
-              />
+              {currentTarget || !snapshotPlanet ? (
+                <ExoplanetDetailPanel
+                  mode={mode}
+                  target={currentTarget}
+                  loading={detailLoading}
+                  error={detailError}
+                  onPinToNotebook={pinToNotebook}
+                  onRetry={loadSelectedTarget}
+                  onOpenExport={() => setExportOpen(true)}
+                  planetTab={planetTab}
+                  onPlanetTabChange={setPlanetTab}
+                />
+              ) : (
+                <SnapshotOverview
+                  planet={snapshotPlanet}
+                  snapshotDate={discoverySnapshot?.retrievedAtUtc.slice(0, 10) ?? null}
+                  error={detailError}
+                  loading={detailLoading}
+                  onRetry={loadSelectedTarget}
+                />
+              )}
             </div>
           </div>
 
