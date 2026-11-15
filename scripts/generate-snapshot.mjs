@@ -14,7 +14,7 @@ const SOURCE = 'NASA Exoplanet Archive';
 const TABLE = 'pscomppars';
 const QUERY = [
   'SELECT pl_name, hostname, discoverymethod, disc_year,',
-  'pl_orbper, pl_orbperlim, pl_rade, pl_radelim',
+  'pl_orbper, pl_orbperlim, pl_rade, pl_radelim, sy_dist, ra, dec',
   'FROM pscomppars ORDER BY pl_name',
 ].join(' ');
 
@@ -48,6 +48,9 @@ try {
     radiusEarth: numberOrNull(row.pl_rade),
     radiusLimitFlag: numberOrNull(row.pl_radelim),
     periodLimitFlag: numberOrNull(row.pl_orbperlim),
+    distancePc: numberOrNull(row.sy_dist),
+    raDeg: numberOrNull(row.ra),
+    decDeg: numberOrNull(row.dec),
   }));
   if (planets.some((planet) => !planet.planetName)) throw new Error('NASA returned unnamed planets. No snapshot written.');
   const names = new Set(planets.map((p) => p.planetName));
