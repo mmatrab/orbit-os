@@ -107,7 +107,6 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const [storyIndex, setStoryIndex] = useState(0);
   const [storyPaused, setStoryPaused] = useState(false);
   const [storyDone, setStoryDone] = useState(false);
-  const [storyCountdown, setStoryCountdown] = useState(0);
 
   const [phase, setPhase] = useState<ViewerPhase>('starting');
   const [problem, setProblem] = useState<string | null>(null);
@@ -159,7 +158,6 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     setStoryIndex(0);
     setStoryPaused(false);
     setStoryDone(false);
-    setStoryCountdown(0);
     setTourState('idle');
     tourStartedRef.current = null;
   }, [target?.id, ra, dec, stopTourAnimation]);
@@ -457,7 +455,6 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
 
     const endIndex = storySteps.length - 1;
     const duration = storyStep.durationMs;
-    setStoryCountdown(duration);
 
     if (storyStep.id === 'controls') {
       try {
@@ -469,10 +466,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         // Leave the lesson caption visible even if a WebGL transition fails.
       }
     }
-    const startedAt = Date.now();
     const timer = window.setTimeout(() => {
-      setStoryCountdown(0);
-      if (storyIndex >= endIndex) {
+        if (storyIndex >= endIndex) {
         setStoryDone(true);
         setShowGrid(false);
         try {
@@ -484,12 +479,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         }
       } else setStoryIndex((index) => index + 1);
     }, duration);
-    return () => {
-      window.clearTimeout(timer);
-      setStoryCountdown((current) =>
-        current > 0 ? Math.max(0, current - (Date.now() - startedAt)) : 0
-      );
-    };
+    return () => window.clearTimeout(timer);
     // Switching image surveys is deliberately performed by the existing
     // changeSurvey function, which handles mirrors and tile-load failures.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -501,7 +491,6 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     setStoryIndex(0);
     setStoryPaused(false);
     setStoryDone(false);
-    setStoryCountdown(0);
     setShowGrid(false);
     setTourState('idle');
     tourStartedRef.current = null;
@@ -522,8 +511,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     if (storyIndex < storySteps.length - 1) {
       setStoryIndex((index) => index + 1);
       setStoryPaused(false);
-      setStoryCountdown(0);
-    } else {
+      } else {
       setStoryDone(true);
       setStoryPaused(false);
       setShowGrid(false);
@@ -549,7 +537,6 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     stopTour();
     setStoryDone(true);
     setStoryPaused(false);
-    setStoryCountdown(0);
     setShowGrid(false);
   };
 
@@ -824,7 +811,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
                       setTourState('finished');
                     }
                     setStoryIndex(index);
-                    setStoryPaused(true);
+                    setStoryPaused(false);
                     setStoryDone(false);
                   }
                 }}
