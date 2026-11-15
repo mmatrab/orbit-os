@@ -824,7 +824,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target, archiveL
             Host-star coordinates from the dated NASA catalogue ({archiveLocation.snapshotDate}).
             The detailed live planet record is unavailable; this sky view is not a photograph of the exoplanet.
           </p>
-        )
+        )}
         <div className="rounded-lg border border-cyan-700/50 bg-[#10283b]/90 p-3 sm:p-4" aria-label="Guided sky explanation">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
