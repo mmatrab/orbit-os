@@ -45,16 +45,6 @@ export const SURVEY_STORY = [
     sourceUrl: 'https://irsa.ipac.caltech.edu/onlinehelp/wise/wise/overview.html',
   },
   {
-    id: 'sharp-optical',
-    label: 'Sharper visible sky: Pan-STARRS',
-    title: 'Pan-STARRS — sharper optical detail',
-    explanation: 'This visible-light survey can offer finer detail than DSS2 in its coverage area. It covers declinations north of about −30°, so it is not available everywhere.',
-    benefit: 'Useful for inspecting a star’s close optical neighbourhood.',
-    surveyId: 'P/PanSTARRS/DR1/color-z-zg-g',
-    durationMs: 5500,
-    sourceUrl: 'https://archive.stsci.edu/panstarrs/',
-  },
-  {
     id: 'controls',
     label: 'Zoom, grid and navigation',
     title: 'You are in control of the sky',
@@ -68,9 +58,8 @@ export const SURVEY_STORY = [
 
 export type SurveyStoryStep = (typeof SURVEY_STORY)[number];
 
-export function storyStepsForDec(decDeg: number | null): SurveyStoryStep[] {
-  // The coverage limit is given by the configured Pan-STARRS survey.
-  return SURVEY_STORY.filter((step) =>
-    step.id !== 'sharp-optical' || (decDeg !== null && decDeg >= -30)
-  );
+export function storyStepsForDec(_decDeg: number | null): SurveyStoryStep[] {
+  // The automatic lesson uses only its three core imaging surveys.
+  // Pan-STARRS remains an optional, manually selected survey.
+  return [...SURVEY_STORY];
 }
