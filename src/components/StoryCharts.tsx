@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   binDiscoveryYears,
   DISCOVERY_METHODS,
@@ -7,7 +7,9 @@ import {
   type DiscoveryCategory,
   type PlanetSnapshot,
 } from '../utils/storyCharts';
-import { loadLatestSnapshot } from '../stories/loadSnapshot';
+import { useSnapshot } from '../stories/useSnapshot';
+import { DiscoveryTimeline } from './DiscoveryTimeline';
+import type { PlanetSnapshot as LoadedSnapshot } from '../stories/planetSnapshot';
 
 const COLOURS: Record<DiscoveryCategory, string> = {
   Transit: '#56B4E9',
@@ -19,110 +21,12 @@ const COLOURS: Record<DiscoveryCategory, string> = {
   Other: '#D55E00',
 };
 
-const MILESTONES = [
-  { year: 1992, text: 'First confirmed pulsar planets', url: 'https://science.nasa.gov/universe/exoplanets/discovery-alert-with-six-new-worlds-5500-discovery-milestone-passed/' },
-  { year: 1995, text: '51 Pegasi b around a Sun-like star', url: 'https://science.nasa.gov/exoplanet-catalog/51-pegasi-b/' },
-  { year: 2009, text: 'NASA launches Kepler', url: 'https://science.nasa.gov/mission/kepler/in-depth/' },
-] as const;
-
 const W = 850;
 const H = 280;
 const L = 52;
 const R = 20;
 const T = 14;
 const B = 42;
-
-function Timeline({ snapshot }: { snapshot: PlanetSnapshot }) {
-  const { bins, excluded } = useMemo(() => binDiscoveryYears(snapshot.planets), [snapshot]);
-  const [shown, setShown] = useState<DiscoveryCategory[]>([...DISCOVERY_METHODS]);
-  const [table, setTable] = useState(false);
-  const max = Math.max(1, ...bins.map((bin) => DISCOVERY_METHODS.reduce((sum, m) => sum + (shown.includes(m) ? bin.counts[m] : 0), 0)));
-  const xStep = (W - L - R) / Math.max(1, bins.length);
-  const yRange = H - T - B;
-
-  return (
-    <section aria-labelledby="story-timeline-title" className="rounded border border-slate-700 bg-[#161e2c] p-4">
-      <h3 id="story-timeline-title" className="text-base font-semibold text-slate-50">How did we find the planets we know?</h3>
-      <p className="mt-1 text-xs text-slate-300">
-        NASA Exoplanet Archive · pscomppars · Snapshot {snapshot.retrievedAtUtc.slice(0, 10)} ·
-        {' '}{snapshot.totalCount.toLocaleString()} planets · {excluded.toLocaleString()} without a discovery year
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2" aria-label="Discovery methods — select to show or hide">
-        {DISCOVERY_METHODS.map((method) => (
-          <button
-            key={method}
-            type="button"
-            aria-pressed={shown.includes(method)}
-            onClick={() => setShown((s) => s.includes(method) ? s.filter((v) => v !== method) : [...s, method])}
-            className={`rounded border px-2 py-1 text-xs cursor-pointer ${
-              shown.includes(method) ? 'border-slate-500 text-slate-100' : 'border-slate-700 text-slate-500 line-through'
-            }`}
-          >
-            <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COLOURS[method] }} />
-            {method}
-          </button>
-        ))}
-      </div>
-      <button type="button" className="sky-btn mt-3" onClick={() => setTable((v) => !v)}>
-        {table ? 'Show chart' : 'Show accessible data table'}
-      </button>
-      {table ? (
-        <div className="mt-3 max-h-[350px] overflow-auto">
-          <table className="w-full text-xs text-left border-collapse">
-            <caption className="text-left pb-2">Number of planets by discovery year and method. All methods included, regardless of chart filters.</caption>
-            <thead><tr><th scope="col" className="p-2">Year</th>{DISCOVERY_METHODS.map((m) => <th key={m} scope="col" className="p-2">{m}</th>)}<th scope="col" className="p-2">Total</th></tr></thead>
-            <tbody>{bins.map((b) => <tr key={b.year} className="border-t border-slate-700"><th scope="row" className="p-2">{b.year}</th>{DISCOVERY_METHODS.map((m) => <td key={m} className="p-2">{b.counts[m]}</td>)}<td className="p-2">{b.total}</td></tr>)}</tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="mt-3 overflow-x-auto">
-          <svg viewBox={`0 0 ${W} ${H}`} className="min-w-[600px] w-full" role="img" aria-label="Stacked bar chart of confirmed exoplanets per discovery year and discovery method. Use the data table for exact counts.">
-            <line x1={L} y1={T + yRange} x2={W-R} y2={T + yRange} stroke="#94a3b8" />
-            {[0, 0.5, 1].map((fraction) => (
-              <g key={fraction}>
-                <line x1={L} y1={T + yRange * (1-fraction)} x2={W-R} y2={T + yRange * (1-fraction)} stroke="#475569" strokeDasharray="3 5" />
-                <text x={L - 7} y={T + yRange * (1-fraction) + 4} textAnchor="end" fontSize="12" fill="#cbd5e1">{Math.round(max * fraction)}</text>
-              </g>
-            ))}
-            {bins.map((b, i) => {
-              const x = L + i * xStep + 1;
-              let used = 0;
-              return (
-                <g key={b.year}>
-                  {DISCOVERY_METHODS.filter((m) => shown.includes(m)).map((method) => {
-                    const count = b.counts[method];
-                    const h = count / max * yRange;
-                    const y = T + yRange - used - h;
-                    used += h;
-                    return count > 0 ? (
-                      <rect key={method} x={x} y={y} width={Math.max(1, xStep - 2)} height={h} fill={COLOURS[method]}>
-                        <title>{b.year} · {method}: {count} planets</title>
-                      </rect>
-                    ) : null;
-                  })}
-                  {(i % Math.max(1, Math.ceil(bins.length / 9)) === 0 || i === bins.length - 1) && (
-                    <text x={x + xStep/2} y={H-B+20} textAnchor="middle" fill="#cbd5e1" fontSize="11">{b.year}</text>
-                  )}
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-      )}
-      <p className="mt-2 text-xs text-slate-300">Discovery year is when a planet was first reported, not the year NASA added it to this snapshot. Unknown discovery methods count as “Other”.</p>
-      <div className="mt-3 border-t border-slate-700 pt-3">
-        <p className="text-xs font-semibold text-cyan-200">Three milestones verified with NASA</p>
-        <div className="mt-2 flex flex-wrap gap-3 text-xs">
-          {MILESTONES.map((m) => (
-            <a key={m.year} href={m.url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline underline-offset-2">
-              {m.year}: {m.text} (NASA source)
-            </a>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
   const { plotted, excluded } = useMemo(() => filterLoggable(snapshot.planets), [snapshot]);
@@ -223,59 +127,53 @@ function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
   );
 }
 
-/** Charts only render when a real, dated NASA snapshot has been generated. */
+/** Adapter for the radius–period chart's shape; the snapshot keeps the archive's limit marking as status "l". */
+function toChartSnapshot(snap: LoadedSnapshot): PlanetSnapshot {
+  return {
+    schemaVersion: 'orbit-os.planets-snapshot.v1',
+    retrievedAtUtc: snap.retrievedAtUtc,
+    source: snap.sourceName,
+    table: snap.table,
+    query: snap.query,
+    totalCount: snap.planets.length,
+    planets: snap.planets.map((p) => ({
+      planetName: p.planetName,
+      hostname: p.hostname ?? '',
+      discoveryMethod: p.discoveryMethod ?? 'Other',
+      discoveryYear: p.discoveryYear,
+      orbitalPeriodDays: p.orbitalPeriodDays,
+      radiusEarth: p.radiusEarth,
+      radiusLimitFlag: p.radiusStatus === 'l' ? 1 : 0,
+      periodLimitFlag: p.orbitalPeriodStatus === 'l' ? 1 : 0,
+    })),
+  };
+}
+
+/** Charts only render from a real, dated NASA snapshot; nothing is substituted if it is missing. */
 export function StoryCharts() {
-  const [snapshot, setSnapshot] = useState<PlanetSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    loadLatestSnapshot()
-      .then((snap) => {
-        // Adapter to this component's shape; the snapshot keeps the archive's limit marking as status "l".
-        const value: PlanetSnapshot = {
-          schemaVersion: 'orbit-os.planets-snapshot.v1',
-          retrievedAtUtc: snap.retrievedAtUtc,
-          source: snap.sourceName,
-          table: snap.table,
-          query: snap.query,
-          totalCount: snap.planets.length,
-          planets: snap.planets.map((p) => ({
-            planetName: p.planetName,
-            hostname: p.hostname ?? '',
-            discoveryMethod: p.discoveryMethod ?? 'Other',
-            discoveryYear: p.discoveryYear,
-            orbitalPeriodDays: p.orbitalPeriodDays,
-            radiusEarth: p.radiusEarth,
-            radiusLimitFlag: p.radiusStatus === 'l' ? 1 : 0,
-            periodLimitFlag: p.orbitalPeriodStatus === 'l' ? 1 : 0,
-          })),
-        };
-        if (!verifySnapshot(value)) throw new Error('NASA snapshot did not pass validation.');
-        if (!cancelled) setSnapshot(value);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Cannot load NASA snapshot.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const state = useSnapshot();
+  const chartSnapshot = useMemo(() => {
+    if (state.phase !== 'ready') return null;
+    const value = toChartSnapshot(state.snapshot);
+    return verifySnapshot(value) ? value : null;
+  }, [state]);
 
   return (
-    <section className="mt-6 space-y-4" aria-labelledby="story-charts-heading">
+    <section id="story-charts" className="mt-6 space-y-4" aria-labelledby="story-charts-heading">
       <h2 id="story-charts-heading" className="text-xl font-semibold text-slate-50">Discoveries across the galaxy</h2>
-      {loading ? <p className="text-sm text-slate-300" role="status">Loading the dated NASA snapshot…</p> : null}
-      {error ? (
+      {state.phase === 'loading' ? <p className="text-sm text-slate-300" role="status">Loading the dated NASA snapshot…</p> : null}
+      {state.phase === 'error' ? (
         <div role="status" className="rounded border border-amber-700 bg-amber-950/20 p-4 text-sm text-slate-200">
-          <p>The historical charts are unavailable: {error}</p>
-          <p className="mt-1">The deployed site needs a real archive snapshot generated with <code>npm run snapshot</code>. No example data are substituted.</p>
+          <p>The charts are unavailable: {state.message}</p>
+          <p className="mt-1">A real archive snapshot is needed (<code>npm run snapshot</code>). No example data are substituted.</p>
         </div>
       ) : null}
-      {snapshot ? <><Timeline snapshot={snapshot} /><RadiusPeriodChart snapshot={snapshot} /></> : null}
+      {state.phase === 'ready' ? (
+        <>
+          <DiscoveryTimeline snapshot={state.snapshot} />
+          {chartSnapshot ? <RadiusPeriodChart snapshot={chartSnapshot} /> : null}
+        </>
+      ) : null}
     </section>
   );
 }
