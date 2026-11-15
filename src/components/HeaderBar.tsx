@@ -2,7 +2,7 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import { DataSourceMode, ExoplanetDetail, HealthResponse } from '../api/contracts';
 
-export type WorkspaceTab = 'explorer' | 'notebook' | 'provenance';
+export type WorkspaceTab = 'explorer' | 'learn' | 'notebook' | 'provenance';
 
 interface HeaderBarProps {
   activeTab: WorkspaceTab;
@@ -18,6 +18,7 @@ interface HeaderBarProps {
 
 const TABS: { id: WorkspaceTab; label: (n: { notes: number }) => string }[] = [
   { id: 'explorer', label: () => 'Explore' },
+  { id: 'learn', label: () => 'Learn' },
   { id: 'notebook', label: ({ notes }) => (notes ? `My notes (${notes})` : 'My notes') },
   { id: 'provenance', label: () => 'Data sources' },
 ];
