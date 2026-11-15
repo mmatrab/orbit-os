@@ -389,7 +389,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
       const g = canvas.getContext('2d');
       if (!g) throw new Error('2D canvas unavailable');
       g.drawImage(img, 0, 0);
-      g.fillStyle = '#05080d';
+      g.fillStyle = '#0b1019';
       g.fillRect(0, img.height, canvas.width, footerH);
       g.fillStyle = '#e2e8f0';
       g.font = '13px ui-monospace, SFMono-Regular, Menlo, monospace';
@@ -432,10 +432,10 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
 
   return (
     <section
-      className="bg-[#0F151E] border border-slate-800 rounded flex flex-col"
+      className="bg-[#161e2c] border border-slate-800 rounded flex flex-col"
       aria-labelledby="sky-viewer-title"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
         <div>
           <h2 id="sky-viewer-title" className="text-sm font-semibold text-slate-100">
             Sky around {target ? target.hostStar.hostname : 'the host star'}
@@ -458,7 +458,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
             <select
               value={surveyId}
               onChange={(e) => void changeSurvey(e.target.value)}
-              className="px-2 py-1.5 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
+              className="px-2 py-1.5 text-xs bg-[#0e1420] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
             >
               {HIPS_SURVEYS.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -472,7 +472,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
             <span className="text-[11px] text-slate-400" id="zoom-label">
               Zoom
             </span>
-            <div className="inline-flex bg-[#07090E] border border-slate-800 rounded p-0.5" role="group" aria-labelledby="zoom-label">
+            <div className="inline-flex bg-[#0e1420] border border-slate-800 rounded p-0.5" role="group" aria-labelledby="zoom-label">
               {ZOOM_PRESETS.map((z) => (
                 <button
                   key={z.deg}
@@ -519,7 +519,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         </div>
         <p className="text-[11px] text-slate-500 -mt-1">{survey.description}</p>
 
-        <div ref={frameRef} className="sky-frame relative rounded border border-slate-800 overflow-hidden bg-[#04060A]">
+        <div ref={frameRef} className="sky-frame relative rounded border border-slate-800 overflow-hidden bg-[#0a0f18]">
           <div
             ref={hostRef}
             className="aladin-viewport-host cursor-crosshair"
@@ -532,7 +532,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
           />
           {statusText[phase] && (
             <div
-              className="absolute inset-x-0 bottom-0 px-3 py-2 bg-[#04060A]/85 text-xs text-slate-200 flex items-center gap-2"
+              className="absolute inset-x-0 bottom-0 px-3 py-2 bg-[#0a0f18]/85 text-xs text-slate-200 flex items-center gap-2"
               role="status"
               aria-live="polite"
             >
@@ -542,7 +542,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
           )}
           {blocking && (
             <div
-              className="absolute inset-0 flex items-center justify-center p-4 bg-[#04060A]/92"
+              className="absolute inset-0 flex items-center justify-center p-4 bg-[#0a0f18]/92"
               role="alert"
             >
               <div className="max-w-md text-xs text-slate-200 flex flex-col gap-3">
@@ -629,7 +629,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
               <select
                 value={cooFrame}
                 onChange={(e) => setCooFrame(e.target.value as 'ICRSd' | 'galactic')}
-                className="px-2 py-1 bg-[#07090E] border border-slate-700 rounded text-slate-100"
+                className="px-2 py-1 bg-[#0e1420] border border-slate-700 rounded text-slate-100"
               >
                 <option value="ICRSd">Equatorial (ICRS, J2000)</option>
                 <option value="galactic">Galactic</option>
@@ -640,7 +640,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
               <select
                 value={projection}
                 onChange={(e) => setProjection(e.target.value as 'SIN' | 'AIT' | 'MOL')}
-                className="px-2 py-1 bg-[#07090E] border border-slate-700 rounded text-slate-100"
+                className="px-2 py-1 bg-[#0e1420] border border-slate-700 rounded text-slate-100"
               >
                 <option value="SIN">Orthographic (SIN)</option>
                 <option value="AIT">Aitoff (AIT)</option>

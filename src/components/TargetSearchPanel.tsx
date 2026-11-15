@@ -72,10 +72,10 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
 
   return (
     <section
-      className="bg-[#0F151E] border border-slate-800 rounded flex flex-col"
+      className="bg-[#161e2c] border border-slate-800 rounded flex flex-col"
       aria-labelledby="search-panel-title"
     >
-      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
         <h2 id="search-panel-title" className="text-sm font-semibold text-slate-100">
           Planets
         </h2>
@@ -113,7 +113,7 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                   discoveryMethod: e.target.value as DiscoveryMethod | 'ALL',
                 })
               }
-              className="w-full px-2.5 py-2 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
+              className="w-full px-2.5 py-2 text-xs bg-[#0e1420] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
             >
               {DISCOVERY_METHODS.map((m) => (
                 <option key={m} value={m}>
@@ -230,7 +230,7 @@ export const TargetSearchPanel: React.FC<TargetSearchPanelProps> = ({
                       className={`w-full text-left px-3 py-2 rounded border transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-cyan-400 ${
                         isSelected
                           ? 'border-cyan-400/80 bg-cyan-950/25'
-                          : 'border-slate-800 bg-[#07090E] hover:border-slate-600'
+                          : 'border-slate-800 bg-[#0e1420] hover:border-slate-600'
                       }`}
                     >
                       <div className="flex items-baseline justify-between gap-2">

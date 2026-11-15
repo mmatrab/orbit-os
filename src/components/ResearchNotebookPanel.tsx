@@ -147,10 +147,10 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
 
   return (
     <section
-      className="bg-[#0F151E] border border-slate-800 rounded"
+      className="bg-[#161e2c] border border-slate-800 rounded"
       aria-labelledby="notebook-title"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
         <h2 id="notebook-title" className="text-sm font-semibold text-slate-100">
           My notes
         </h2>
@@ -203,7 +203,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as NotebookCategory)}
-              className="w-full px-2.5 py-2 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
+              className="w-full px-2.5 py-2 text-xs bg-[#0e1420] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -220,7 +220,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Compare mass with the newer paper"
               required
-              className="w-full px-2.5 py-2 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
+              className="w-full px-2.5 py-2 text-xs bg-[#0e1420] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
             />
           </label>
 
@@ -232,7 +232,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
               onChange={(e) => setBody(e.target.value)}
               placeholder="What did you notice? What should be checked next?"
               required
-              className="w-full px-2.5 py-2 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
+              className="w-full px-2.5 py-2 text-xs bg-[#0e1420] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
             />
           </label>
 
@@ -242,7 +242,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
               value={tagsRaw}
               onChange={(e) => setTagsRaw(e.target.value)}
               placeholder="follow-up, radius"
-              className="w-full px-2.5 py-2 text-xs font-mono bg-[#07090E] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
+              className="w-full px-2.5 py-2 text-xs font-mono bg-[#0e1420] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
             />
           </label>
 
@@ -287,7 +287,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
                   placeholder="Filter notes…"
                   value={filterQuery}
                   onChange={(e) => setFilterQuery(e.target.value)}
-                  className="pl-8 pr-2.5 py-1.5 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
+                  className="pl-8 pr-2.5 py-1.5 text-xs bg-[#0e1420] border border-slate-700 rounded text-slate-100 placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
                 />
               </div>
 
@@ -295,7 +295,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
                 aria-label="Filter by category"
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value as NotebookCategory | 'ALL')}
-                className="px-2 py-1.5 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
+                className="px-2 py-1.5 text-xs bg-[#0e1420] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
               >
                 <option value="ALL">All categories</option>
                 {CATEGORIES.map((c) => (
@@ -330,7 +330,7 @@ export const ResearchNotebookPanel: React.FC<ResearchNotebookPanelProps> = ({
               {visibleEntries.map((entry) => (
                 <article
                   key={entry.id}
-                  className="p-3.5 rounded border border-slate-800 bg-[#07090E]"
+                  className="p-3.5 rounded border border-slate-800 bg-[#0e1420]"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>

@@ -94,8 +94,8 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-3xl max-h-[90vh] flex flex-col bg-[#0F151E] border border-slate-700 rounded overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
+      <div className="w-full max-w-3xl max-h-[90vh] flex flex-col bg-[#161e2c] border border-slate-700 rounded overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
           <h2 id="export-modal-title" className="text-xs font-semibold tracking-wide text-slate-100">
             Export {target.planetName}
           </h2>
@@ -116,7 +116,7 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
               <select
                 value={format}
                 onChange={(e) => setFormat(e.target.value as 'json' | 'csv' | 'markdown')}
-                className="px-2.5 py-1.5 text-xs bg-[#07090E] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
+                className="px-2.5 py-1.5 text-xs bg-[#0e1420] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
               >
                 <option value="json">JSON — complete record with sources (for code)</option>
                 <option value="csv">CSV — one row per value (for Excel / analysis)</option>
@@ -137,7 +137,7 @@ export const EvidenceExportModal: React.FC<EvidenceExportModalProps> = ({
             </label>
           </div>
 
-          <pre className="m-0 p-3 max-h-80 overflow-auto rounded border border-slate-800 bg-[#07090E] font-mono text-[11px] text-slate-200 leading-relaxed">
+          <pre className="m-0 p-3 max-h-80 overflow-auto rounded border border-slate-800 bg-[#0e1420] font-mono text-[11px] text-slate-200 leading-relaxed">
             {previewText}
           </pre>
 

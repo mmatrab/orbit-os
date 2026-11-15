@@ -10,7 +10,7 @@
   body,
   #root {
     min-height: 100vh;
-    background-color: #07090e;
+    background-color: #0e1420;
     color: #e6edf3;
     font-family: var(--font-sans);
     font-size: 13px;
@@ -43,7 +43,7 @@
   position: relative;
   width: 100%;
   height: clamp(280px, min(62vh, 115vw), 680px);
-  background-color: #04060a;
+  background-color: #0a0f18;
   overflow: hidden;
 }
 
@@ -65,7 +65,7 @@
   font-weight: 500;
   border-radius: 0.25rem;
   border: 1px solid #334155;
-  background: #07090e;
+  background: #0e1420;
   color: #e2e8f0;
   white-space: nowrap;
   cursor: pointer;

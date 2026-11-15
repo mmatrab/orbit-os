@@ -304,7 +304,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#07090E] text-[#E6EDF3]">
+    <div className="min-h-screen flex flex-col bg-[#0e1420] text-[#E6EDF3]">
       <a
         href="#main-workspace"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-1.5 focus:rounded focus:bg-cyan-400 focus:text-slate-950 focus:font-semibold focus:text-xs"

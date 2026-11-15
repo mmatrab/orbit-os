@@ -30,7 +30,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 }) => {
   const online = health?.status === 'ok' && !healthError;
   return (
-    <header className="border-b border-slate-800 bg-[#0B0F17]">
+    <header className="border-b border-slate-800 bg-[#111827]">
       <div className="max-w-[1400px] mx-auto flex flex-wrap items-center justify-between gap-x-8 px-4 lg:px-6 min-h-14">
         <span className="text-[15px] font-semibold tracking-tight text-slate-100 whitespace-nowrap py-3">
           ORBIT OS <span className="text-slate-500 font-normal">· Space Explorer</span>

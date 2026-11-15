@@ -50,10 +50,10 @@ export const ProvenancePanel: React.FC<ProvenancePanelProps> = ({
 
   return (
     <section
-      className="bg-[#0F151E] border border-slate-800 rounded"
+      className="bg-[#161e2c] border border-slate-800 rounded"
       aria-labelledby="provenance-title"
     >
-      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
         <h2 id="provenance-title" className="text-sm font-semibold text-slate-100">
           Data sources
         </h2>
@@ -61,7 +61,7 @@ export const ProvenancePanel: React.FC<ProvenancePanelProps> = ({
           type="button"
           onClick={onRefresh}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded border border-slate-700 bg-[#07090E] text-slate-200 hover:border-cyan-400 hover:text-cyan-300 disabled:opacity-50 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded border border-slate-700 bg-[#0e1420] text-slate-200 hover:border-cyan-400 hover:text-cyan-300 disabled:opacity-50 transition-colors cursor-pointer"
         >
           <RotateCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
           <span>{loading ? 'Checking…' : 'Refresh Source Status'}</span>
@@ -70,7 +70,7 @@ export const ProvenancePanel: React.FC<ProvenancePanelProps> = ({
 
       <div className="p-4 flex flex-col gap-4 text-xs">
         {activeTarget && (
-          <div className="p-3.5 rounded border border-slate-800 bg-[#07090E]">
+          <div className="p-3.5 rounded border border-slate-800 bg-[#0e1420]">
             <h3 className="text-xs font-semibold text-cyan-300">
               Active Target Provenance — {activeTarget.planetName}
             </h3>
@@ -102,7 +102,7 @@ export const ProvenancePanel: React.FC<ProvenancePanelProps> = ({
           {sources.map((src) => (
             <article
               key={src.id}
-              className="p-4 rounded border border-slate-800 bg-[#07090E] flex flex-col gap-2"
+              className="p-4 rounded border border-slate-800 bg-[#0e1420] flex flex-col gap-2"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-[13px] font-semibold text-slate-100">{src.name}</h3>

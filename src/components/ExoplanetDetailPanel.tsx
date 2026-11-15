@@ -127,7 +127,7 @@ const KeyFact: React.FC<{ label: string; hint: string; measurement: ScientificMe
 }) => {
   const valueText = formatMeasurementValue(measurement);
   return (
-    <div className="p-3 rounded border border-slate-800 bg-[#07090E]">
+    <div className="p-3 rounded border border-slate-800 bg-[#0e1420]">
       <div className="text-xs font-medium text-slate-300">{label}</div>
       {valueText === null ? (
         <div className="mt-1 text-sm text-slate-500 italic">Not measured</div>
@@ -175,10 +175,10 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
   if (error) {
     return (
       <section
-        className="bg-[#0F151E] border border-slate-800 rounded"
+        className="bg-[#161e2c] border border-slate-800 rounded"
         aria-labelledby="detail-panel-title"
       >
-        <div className="px-4 py-3 border-b border-slate-800 bg-[#121A25]">
+        <div className="px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
           <h2 id="detail-panel-title" className="text-xs font-semibold tracking-wide text-slate-100">
             Planet overview
           </h2>
@@ -211,10 +211,10 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
   if (loading) {
     return (
       <section
-        className="bg-[#0F151E] border border-slate-800 rounded"
+        className="bg-[#161e2c] border border-slate-800 rounded"
         aria-labelledby="detail-panel-title"
       >
-        <div className="px-4 py-3 border-b border-slate-800 bg-[#121A25]">
+        <div className="px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
           <h2 id="detail-panel-title" className="text-xs font-semibold tracking-wide text-slate-100">
             Planet overview
           </h2>
@@ -234,10 +234,10 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
   if (!target) {
     return (
       <section
-        className="bg-[#0F151E] border border-slate-800 rounded"
+        className="bg-[#161e2c] border border-slate-800 rounded"
         aria-labelledby="detail-panel-title"
       >
-        <div className="px-4 py-3 border-b border-slate-800 bg-[#121A25]">
+        <div className="px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
           <h2 id="detail-panel-title" className="text-xs font-semibold tracking-wide text-slate-100">
             Planet overview
           </h2>
@@ -261,7 +261,7 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
         id="planet-panel-data"
         role="tabpanel"
         aria-labelledby="planet-tab-data"
-        className="bg-[#0F151E] border border-slate-800 rounded"
+        className="bg-[#161e2c] border border-slate-800 rounded"
       >
         <div className="p-4 text-xs">
           <p className="mb-4 text-[11px] text-slate-400 max-w-3xl">
@@ -456,10 +456,10 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
 
   return (
     <section
-      className="bg-[#0F151E] border border-slate-800 rounded flex flex-col"
+      className="bg-[#161e2c] border border-slate-800 rounded flex flex-col"
       aria-labelledby="detail-panel-title"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#121A25]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
         <div>
           <h2 id="detail-panel-title" className="text-lg font-semibold text-slate-50">
             {target.planetName}
@@ -486,7 +486,7 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
         </div>
       </div>
 
-      <div className="flex gap-1 px-3 border-b border-slate-800 bg-[#0F151E]" role="tablist" aria-label={`${target.planetName} views`}>
+      <div className="flex gap-1 px-3 border-b border-slate-800 bg-[#161e2c]" role="tablist" aria-label={`${target.planetName} views`}>
         {(
           [
             ['overview', 'Overview & sky'],

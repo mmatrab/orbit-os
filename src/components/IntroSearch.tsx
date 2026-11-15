@@ -19,7 +19,7 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
   onPickExample,
 }) => (
   <section
-    className="mb-4 px-5 py-4 rounded border border-slate-800 bg-[#0F151E]"
+    className="mb-4 px-5 py-4 rounded border border-slate-800 bg-[#161e2c]"
     aria-labelledby="intro-title"
   >
     <h1 id="intro-title" className="text-xl sm:text-2xl font-semibold text-slate-50">
@@ -53,7 +53,7 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
         placeholder="Search a planet or star, e.g. TRAPPIST-1"
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
-        className="w-full pl-10 pr-10 py-3 text-base bg-[#07090E] border border-slate-600 rounded text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
+        className="w-full pl-10 pr-10 py-3 text-base bg-[#0e1420] border border-slate-600 rounded text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
       />
       <kbd
         className="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 px-1.5 rounded border border-slate-700 text-[11px] text-slate-500 font-mono"
