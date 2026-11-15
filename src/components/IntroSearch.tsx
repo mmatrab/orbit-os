@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Compass, Search, X } from 'lucide-react';
+import { ChevronDown, Compass, Search } from 'lucide-react';
 import type { DiscoveryMethod, ExoplanetSearchItem } from '../api/contracts';
 import type { PlanetSnapshot } from '../stories/planetSnapshot';
 import { METHOD_ORDER, METHOD_PLAIN, LIGHT_YEARS_PER_PARSEC } from '../stories/planetSnapshot';
@@ -112,7 +112,7 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
         {' '}Start with a name, or browse real planets and the stars they orbit.
       </p>
 
-      <div ref={rootRef} className="mt-3 relative max-w-2xl" id="planet-search">
+      <div ref={rootRef} className="mt-3 relative w-full" id="planet-search">
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
           <label htmlFor="target-query" className="sr-only">Search a planet or host star</label>
@@ -141,76 +141,76 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
 
         {open && (
           <div id="search-suggestions"
-            className="absolute z-50 top-full left-0 right-0 mt-1 rounded border border-slate-600 bg-[#192536] shadow-2xl shadow-black/60 overflow-hidden"
+            className="absolute z-50 top-full left-0 right-0 mt-2 rounded-lg border border-slate-500 bg-[#192536] shadow-2xl shadow-black/70 overflow-hidden"
             aria-label="Explore NASA catalogue">
-            <div className="p-3 border-b border-slate-700">
+            <div className="p-4 border-b border-slate-700">
               <div className="flex gap-2 flex-wrap items-center justify-between">
-                <span className="text-xs font-semibold text-slate-100 flex items-center gap-1.5">
+                <span className="text-sm font-semibold text-slate-100 flex items-center gap-2">
                   <Compass className="w-4 h-4 text-cyan-300" aria-hidden="true" />
                   Explore by category
                 </span>
                 <button type="button" onClick={() => { onQueryChange(''); setPlanetSize('all'); onDiscoveryMethodChange('ALL'); }}
-                  className="text-xs text-cyan-300 hover:underline cursor-pointer">Reset filters</button>
+                  className="text-sm text-cyan-300 hover:underline cursor-pointer">Reset filters</button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2.5">
-                <label className="text-[11px] text-slate-300">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                <label className="text-sm text-slate-200">
                   Object
                   <select value={objectType} onChange={(e) => setObjectType(e.target.value as SearchObjectType)}
-                    className="mt-1 block w-full bg-[#0e1420] border border-slate-600 text-slate-100 rounded px-2 py-2 text-xs">
+                    className="mt-1.5 block w-full min-h-11 bg-[#0e1420] border border-slate-600 text-slate-100 rounded px-3 py-2.5 text-sm focus-visible:outline-2 focus-visible:outline-cyan-400">
                     <option value="planet">Planets</option>
                     <option value="system">Host stars / systems</option>
                   </select>
                 </label>
-                <label className="text-[11px] text-slate-300">
+                <label className="text-sm text-slate-200">
                   Size of planet
                   <select value={planetSize} onChange={(e) => setPlanetSize(e.target.value as PlanetSizeFilter)}
-                    className="mt-1 block w-full bg-[#0e1420] border border-slate-600 text-slate-100 rounded px-2 py-2 text-xs">
+                    className="mt-1.5 block w-full min-h-11 bg-[#0e1420] border border-slate-600 text-slate-100 rounded px-3 py-2.5 text-sm focus-visible:outline-2 focus-visible:outline-cyan-400">
                     {(Object.entries(PLANET_SIZE_LABELS) as [PlanetSizeFilter,string][]).map(([key,label]) =>
                       <option value={key} key={key}>{label}</option>)}
                   </select>
                 </label>
-                <label className="text-[11px] text-slate-300">
+                <label className="text-sm text-slate-200">
                   Discovery method
                   <select value={discoveryMethod} onChange={(e) => onDiscoveryMethodChange(e.target.value as DiscoveryMethod | 'ALL')}
-                    className="mt-1 block w-full bg-[#0e1420] border border-slate-600 text-slate-100 rounded px-2 py-2 text-xs">
+                    className="mt-1.5 block w-full min-h-11 bg-[#0e1420] border border-slate-600 text-slate-100 rounded px-3 py-2.5 text-sm focus-visible:outline-2 focus-visible:outline-cyan-400">
                     <option value="ALL">All methods</option>
                     {METHOD_ORDER.map((method) => <option key={method} value={method}>{METHOD_PLAIN[method].label}</option>)}
                   </select>
                 </label>
               </div>
-              <p className="text-[11px] text-slate-400 mt-2">
+              <p className="text-xs leading-relaxed text-slate-300 mt-3">
                 Planet size means published radius, not composition. The host-star category shows only stars with confirmed planets.
               </p>
             </div>
-            <div className="max-h-[280px] overflow-y-auto" role="listbox" aria-label="Suggested planets or systems">
+            <div className="max-h-[min(60vh,520px)] overflow-y-auto overscroll-contain" role="listbox" aria-label="Suggested planets or systems">
               {suggestions.map((suggestion, index) => (
                 <button key={suggestion.id} type="button" role="option" aria-selected={index === activeIndex}
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => choose(suggestion.planetName)}
-                  className={`w-full text-left flex items-center justify-between gap-3 px-3 py-2.5 border-b border-slate-800/60 last:border-b-0 cursor-pointer focus-visible:outline focus-visible:outline-cyan-400 ${
+                  className={`w-full min-h-[70px] text-left flex items-center justify-between gap-4 px-4 py-3.5 border-b border-slate-700/60 last:border-b-0 cursor-pointer focus-visible:outline focus-visible:outline-cyan-400 ${
                     index === activeIndex ? 'bg-cyan-900/25' : 'hover:bg-slate-700/40'
                   }`}>
                   <span className="min-w-0">
-                    <span className="block text-sm text-slate-100 font-medium truncate">{suggestion.label}</span>
-                    <span className="block text-xs text-slate-400 truncate">{suggestion.detail}</span>
+                    <span className="block text-base leading-6 text-slate-50 font-semibold truncate">{suggestion.label}</span>
+                    <span className="block text-sm leading-5 text-slate-300 truncate">{suggestion.detail}</span>
                   </span>
-                  <span className="text-xs text-slate-300 shrink-0">{LIGHT_YEAR(suggestion.distancePc) ?? 'Distance unknown'}</span>
+                  <span className="text-sm text-cyan-100 shrink-0">{LIGHT_YEAR(suggestion.distancePc) ?? 'Distance unknown'}</span>
                 </button>
               ))}
               {suggestions.length === 0 && (
-                <div className="px-3 py-4 text-sm text-slate-300">
+                <div className="px-4 py-5 text-sm leading-6 text-slate-200">
                   {loading && !snapshot ? 'Loading real NASA results…' :
                    error && !snapshot ? `NASA search unavailable: ${error}` :
                    'No matching planets. Try removing a filter or typing part of another name.'}
                 </div>
               )}
             </div>
-            <div className="px-3 py-2 bg-[#111827] flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[11px] text-slate-400">
+            <div className="px-4 py-3 bg-[#111827] flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs text-slate-300">
                 {snapshot ? `${(objectType === 'planet' ? results.matchedPlanets : results.matchedSystems)?.toLocaleString('en-US')} matches · NASA snapshot ${snapshot.retrievedAtUtc.slice(0,10)}`
                   : 'Suggestions from current NASA search results'}
               </span>
-              <span className="text-[11px] text-slate-500">↑ ↓ to choose · Enter to open · Esc to close</span>
+              <span className="text-xs text-slate-400">↑ ↓ to choose · Enter to open · Esc to close</span>
             </div>
           </div>
         )}
