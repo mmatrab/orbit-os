@@ -21,6 +21,22 @@ const QUESTIONS = ['How big is it?', 'How far away is it?', 'How long is its yea
  */
 export function FindAWorld({ target, onExploreSky }: FindAWorldProps) {
   const [step, setStep] = useState(0);
+  const [shareNote, setShareNote] = useState<string | null>(null);
+
+  const copyWorldLink = async () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('target', target?.planetName ?? '');
+    if (!navigator.clipboard?.writeText) {
+      setShareNote('Copy the current page URL from your browser, then add ?target= and the planet name.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      setShareNote('World link copied. Share it to open this planet directly.');
+    } catch {
+      setShareNote('Link copying is blocked by this browser. You can share this page from the address bar.');
+    }
+  };
 
   if (!target) return null;
 
@@ -132,11 +148,17 @@ export function FindAWorld({ target, onExploreSky }: FindAWorldProps) {
             Next question
           </button>
         ) : (
-          <button type="button" onClick={onExploreSky} className="sky-btn">
-            Explore its sky
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => void copyWorldLink()} className="sky-btn">
+              Share this world
+            </button>
+            <button type="button" onClick={onExploreSky} className="sky-btn">
+              Explore its sky · export image
+            </button>
+          </div>
         )}
       </div>
+      {shareNote && <p role="status" className="mt-2 text-xs text-cyan-200">{shareNote}</p>}
       <p className="mt-2 text-[11px] text-slate-400">
         Real NASA data. The size, distance and orbit measurements can originate in different publications.
         This is not a photograph of the planet.
