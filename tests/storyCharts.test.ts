@@ -8,7 +8,7 @@ import {
 } from '../src/utils/storyCharts';
 
 function planet(name: string, year: number | null, method: string, period: number | null, radius: number | null): SnapshotPlanet {
-  return { planetName: name, hostname: 'TEST STAR', discoveryYear: year, discoveryMethod: method, orbitalPeriodDays: period, radiusEarth: radius, distancePc: null, raDeg: null, decDeg: null };
+  return { planetName: name, hostname: 'TEST STAR', discoveryYear: year, discoveryMethod: method, orbitalPeriodDays: period, radiusEarth: radius, radiusLimitFlag: 0, periodLimitFlag: 0 };
 }
 
 const SYNTHETIC: SnapshotPlanet[] = [
@@ -36,6 +36,8 @@ describe('NASA snapshot discovery statistics (synthetic input)', () => {
     expect(result.plotted.map((p) => p.planetName)).toEqual(['TEST A', 'TEST B']);
     expect(result.excluded).toBe(2);
     expect(filterLoggable([planet('TEST E', 2010, 'Transit', -5, 1)]).plotted).toEqual([]);
+    expect(filterLoggable([{ ...planet('TEST F', 2010, 'Transit', 5, 1), radiusLimitFlag: 1 }]).plotted).toEqual([]);
+    expect(filterLoggable([{ ...planet('TEST G', 2010, 'Transit', 5, 1), periodLimitFlag: -1 }]).plotted).toEqual([]);
   });
 
   it('rejects records without an actual dated NASA snapshot and exact counts', () => {
