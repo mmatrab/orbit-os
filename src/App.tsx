@@ -20,6 +20,7 @@ import { ProvenancePanel } from './components/ProvenancePanel';
 import { ResearchNotebookPanel } from './components/ResearchNotebookPanel';
 import { SkyViewerPanel } from './components/SkyViewerPanel';
 import { SpaceStage } from './components/SpaceStage';
+import { FindAWorld } from './components/FindAWorld';
 import { SystemViewer3D } from './components/SystemViewer3D';
 import { TargetSearchPanel } from './components/TargetSearchPanel';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
@@ -349,13 +350,19 @@ export function App() {
               setSelectedId(next.selectedId);
             }}
           />
+          <FindAWorld
+            target={selectedTarget}
+            onExploreSky={() => document.getElementById('sky-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          />
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] gap-4 items-start">
             {/* Left: the picture of the star and planet, then the list of planets to pick from. */}
             <div className="flex flex-col gap-4 min-w-0">
-              <SpaceStage
-                sky={<SkyViewerPanel target={selectedTarget} />}
-                system={selectedTarget ? <SystemViewer3D target={selectedTarget} /> : null}
-              />
+              <div id="sky-stage">
+                <SpaceStage
+                  sky={<SkyViewerPanel target={selectedTarget} />}
+                  system={selectedTarget ? <SystemViewer3D target={selectedTarget} /> : null}
+                />
+              </div>
               <TargetSearchPanel
                 mode={mode}
                 params={searchParams}
