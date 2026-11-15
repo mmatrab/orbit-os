@@ -55,6 +55,14 @@ type ViewerPhase =
 
 interface SkyViewerPanelProps {
   target: ExoplanetDetail | null;
+  /** Real host coordinates from the dated NASA snapshot when the live detail times out. */
+  archiveLocation?: {
+    planetName: string;
+    hostname: string;
+    raDeg: number;
+    decDeg: number;
+    snapshotDate: string;
+  } | null;
 }
 
 /**
@@ -88,7 +96,7 @@ function watchForTiles(baseUrl: string, onTile: () => void): () => void {
   };
 }
 
-export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
+export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target, archiveLocation }) => {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const aladinRef = useRef<AladinInstance | null>(null);
@@ -126,9 +134,12 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const [exporting, setExporting] = useState(false);
 
   const survey = findSurvey(surveyId);
-  const ra = target?.hostStar.raDeg ?? null;
-  const dec = target?.hostStar.decDeg ?? null;
-  const tourKey = target ? `${target.id}:${ra}:${dec}:${tourReplay}` : null;
+  const ra = target?.hostStar.raDeg ?? archiveLocation?.raDeg ?? null;
+  const dec = target?.hostStar.decDeg ?? archiveLocation?.decDeg ?? null;
+  const planetName = target?.planetName ?? archiveLocation?.planetName ?? null;
+  const hostName = target?.hostStar.hostname ?? archiveLocation?.hostname ?? null;
+  const hasSkyTarget = planetName !== null && hostName !== null;
+  const tourKey = hasSkyTarget ? `${planetName}:${ra}:${dec}:${tourReplay}` : null;
   const storySteps = storyStepsForDec(dec);
   const storyStep = storySteps[Math.min(storyIndex, storySteps.length - 1)];
   const storyStarted = Boolean(tourKey && tourStartedRef.current === tourKey) || storyIndex > 0;
@@ -137,7 +148,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   useEffect(() => {
     storyProgressRef.current = 0;
     setStoryProgress(0);
-  }, [storyIndex, target?.id, tourReplay]);
+  }, [storyIndex, planetName, tourReplay]);
 
   const stopTourAnimation = useCallback(() => {
     if (tourFrameRef.current !== null) {
@@ -168,7 +179,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     setStoryDone(false);
     setTourState('idle');
     tourStartedRef.current = null;
-  }, [target?.id, ra, dec, stopTourAnimation]);
+  }, [planetName, ra, dec, stopTourAnimation]);
 
   useEffect(() => {
     const element = frameRef.current;
@@ -359,7 +370,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   useEffect(() => {
     const aladin = aladinRef.current;
     const catalog = catalogRef.current;
-    if (!aladin || !libReady || !target) return;
+    if (!aladin || !libReady || !hasSkyTarget) return;
     if (ra === null || dec === null) return; // never invent a position
     try {
       aladin.gotoRaDec(ra, dec);
@@ -368,20 +379,20 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         else if (typeof catalog.removeAll === 'function') catalog.removeAll();
         catalog.addSources([
           libRef.current!.source(ra, dec, {
-            name: target.hostStar.hostname,
-            planet: target.planetName,
+            name: hostName,
+            planet: planetName,
           }),
         ]);
       }
     } catch {
       // Aladin can throw during a layer transition; the next selection re-applies.
     }
-  }, [target, ra, dec, libReady]);
+  }, [planetName, hostName, ra, dec, libReady]);
 
   // 4. Automatically show the visitor a short, silent camera journey when this
   // real sky canvas becomes visible. Never animate a blank/stalled survey.
   useEffect(() => {
-    if (!tourVisible || !libReady || phase !== 'ok' || !target || !tourKey ||
+    if (!tourVisible || !libReady || phase !== 'ok' || !hasSkyTarget || !tourKey ||
         ra === null || dec === null) return;
     if (tourStartedRef.current === tourKey) return;
     tourStartedRef.current = tourKey;
@@ -449,14 +460,14 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
       finish();
     }
     return () => { cancel(); tourCancelRef.current = () => {}; };
-  }, [tourVisible, libReady, phase, target?.id, tourKey, ra, dec, stopTourAnimation]);
+  }, [tourVisible, libReady, phase, planetName, tourKey, ra, dec, stopTourAnimation]);
 
   // Once the arrival flight has completed, continue with an automatically
   // captioned, video-like lesson. A survey step holds until real HiPS imagery
   // has loaded, so the captions never pretend that a failed survey is visible.
   useEffect(() => {
     if (!storyStarted || storyDone || storyPaused || !tourVisible ||
-        tourState !== 'finished' || !target || !hasValidCoordinates(ra, dec)) return;
+        tourState !== 'finished' || !hasSkyTarget || !hasValidCoordinates(ra, dec)) return;
     if (!storyStep) return;
 
     if (storyStep.surveyId && storyStep.surveyId !== surveyId) {
@@ -631,8 +642,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
 
   const metadata = () =>
     buildSkyViewMetadata({
-      planetName: target?.planetName ?? 'No target',
-      hostName: target?.hostStar.hostname ?? '',
+      planetName: planetName ?? 'No target',
+      hostName: hostName ?? '',
       raDeg: ra,
       decDeg: dec,
       fieldOfViewDeg: fovDeg,
@@ -725,13 +736,13 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3 border-b border-slate-800 bg-[#1a2332]">
         <div>
           <h2 id="sky-viewer-title" className="text-sm font-semibold text-slate-100">
-            Sky around {target ? target.hostStar.hostname : 'the host star'}
+            Sky around {hostName ?? 'the host star'}
           </h2>
           <p className="text-[11px] text-slate-400 mt-0.5">
             Real telescope survey images centred on the host star (circle). The planet itself is too faint to see.
           </p>
         </div>
-        {target && (
+        {hasSkyTarget && (
           <span className="font-mono tabular-nums text-[11px] text-cyan-300" title="Right ascension / declination (ICRS, J2000)">
             {formatRaHms(ra)} / {formatDecDms(dec)}
           </span>
@@ -808,6 +819,12 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
           </div>
         </div>
         <p className="text-[11px] text-slate-500 -mt-1">{survey.description}</p>
+        {!target && archiveLocation && (
+          <p className="rounded border border-amber-700/40 px-3 py-2 text-xs text-amber-200">
+            Host-star coordinates from the dated NASA catalogue ({archiveLocation.snapshotDate}).
+            The detailed live planet record is unavailable; this sky view is not a photograph of the exoplanet.
+          </p>
+        )
         <div className="rounded-lg border border-cyan-700/50 bg-[#10283b]/90 p-3 sm:p-4" aria-label="Guided sky explanation">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
@@ -915,8 +932,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
             className="aladin-viewport-host cursor-crosshair"
             role="application"
             aria-label={
-              target
-                ? `Sky map centred on ${target.hostStar.hostname}. Drag to pan, scroll to zoom.`
+              hasSkyTarget
+                ? `Sky map centred on ${hostName}. Drag to pan, scroll to zoom.`
                 : 'Sky map'
             }
           />
