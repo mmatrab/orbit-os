@@ -33,4 +33,8 @@ jobs:
           git add -f data/snapshots/planets-*.json
           git add -f public/data/snapshots/
           git commit -m "data(story): snapshot real NASA pscomppars catalogue"
+          # The author may push other commits while the NASA query is running.
+          # Rebase the generated data on the latest main; never force-push.
+          git fetch origin main
+          git rebase origin/main
           git push origin HEAD:main
