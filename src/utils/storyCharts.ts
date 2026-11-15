@@ -19,9 +19,8 @@ export interface SnapshotPlanet {
   discoveryYear: number | null;
   orbitalPeriodDays: number | null;
   radiusEarth: number | null;
-  distancePc: number | null;
-  raDeg: number | null;
-  decDeg: number | null;
+  radiusLimitFlag: number | null;
+  periodLimitFlag: number | null;
 }
 
 export interface PlanetSnapshot {
@@ -78,9 +77,11 @@ export function filterLoggable(planets: readonly SnapshotPlanet[]): {
   plotted: SnapshotPlanet[];
   excluded: number;
 } {
-  const plotted = planets.filter(({ orbitalPeriodDays, radiusEarth }) =>
+  const plotted = planets.filter(({ orbitalPeriodDays, radiusEarth, periodLimitFlag, radiusLimitFlag }) =>
     typeof orbitalPeriodDays === 'number' && Number.isFinite(orbitalPeriodDays) && orbitalPeriodDays > 0 &&
-    typeof radiusEarth === 'number' && Number.isFinite(radiusEarth) && radiusEarth > 0
+    typeof radiusEarth === 'number' && Number.isFinite(radiusEarth) && radiusEarth > 0 &&
+    (periodLimitFlag === null || periodLimitFlag === 0) &&
+    (radiusLimitFlag === null || radiusLimitFlag === 0)
   );
   return { plotted, excluded: planets.length - plotted.length };
 }
