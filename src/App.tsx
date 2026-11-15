@@ -108,6 +108,19 @@ export function App() {
     () => discoverySnapshot?.planets.find((planet) => planet.planetName === selectedId) ?? null,
     [discoverySnapshot, selectedId]
   );
+  const archiveLocation = useMemo(() => {
+    if (!snapshotPlanet || !discoverySnapshot ||
+        typeof snapshotPlanet.raDeg !== 'number' || !Number.isFinite(snapshotPlanet.raDeg) ||
+        typeof snapshotPlanet.decDeg !== 'number' || !Number.isFinite(snapshotPlanet.decDeg) ||
+        !snapshotPlanet.hostname) return null;
+    return {
+      planetName: snapshotPlanet.planetName,
+      hostname: snapshotPlanet.hostname,
+      raDeg: snapshotPlanet.raDeg,
+      decDeg: snapshotPlanet.decDeg,
+      snapshotDate: discoverySnapshot.retrievedAtUtc.slice(0, 10),
+    };
+  }, [snapshotPlanet, discoverySnapshot]);
 
   // Global `/` shortcut to focus search input when on Explorer tab
   useEffect(() => {
@@ -402,7 +415,7 @@ export function App() {
             <div className="flex flex-col gap-4 min-w-0">
               <div id="sky-stage">
                 <SpaceStage
-                  sky={<SkyViewerPanel target={currentTarget} />}
+                  sky={<SkyViewerPanel target={currentTarget} archiveLocation={archiveLocation} />}
                   system={currentTarget ? <SystemViewer3D target={currentTarget} /> : null}
                 />
               </div>
