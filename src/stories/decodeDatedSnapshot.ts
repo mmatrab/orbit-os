@@ -22,6 +22,8 @@ export interface DatedSnapshotFile {
     radiusLimitFlag: number | null;
     periodLimitFlag: number | null;
     distancePc?: number | null;
+    raDeg?: number | null;
+    decDeg?: number | null;
   }>;
 }
 
@@ -65,6 +67,8 @@ export function decodeDatedSnapshot(value: unknown): PlanetSnapshot {
       radiusEarth: finiteOrNull(row.radiusEarth),
       radiusStatus: row.radiusLimitFlag !== null && row.radiusLimitFlag !== 0 ? 'l' : null,
       distancePc: finiteOrNull(row.distancePc),
+      raDeg: finiteOrNull(row.raDeg),
+      decDeg: finiteOrNull(row.decDeg),
     };
   });
 
