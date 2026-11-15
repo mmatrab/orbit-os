@@ -26,6 +26,7 @@ import { SystemViewer3D } from './components/SystemViewer3D';
 import { TargetSearchPanel } from './components/TargetSearchPanel';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
 import { pickExample } from './utils/examplePick';
+import { useSnapshot } from './stories/useSnapshot';
 
 const DEFAULT_TARGET = 'TRAPPIST-1 e';
 
@@ -63,6 +64,8 @@ export function App() {
   const launch = useMemo(() => readLaunchOptions(), []);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const snapshotState = useSnapshot();
+  const discoverySnapshot = snapshotState.phase === 'ready' ? snapshotState.snapshot : null;
   const skyActionsRef = useRef<SkyViewerActions | null>(null);
   const [skyFocusRequest, setSkyFocusRequest] = useState(0);
 
@@ -79,6 +82,14 @@ export function App() {
     skyActionsRef.current
       ? skyActionsRef.current.exportPng()
       : 'The sky viewer is not ready yet. Open “Explore its sky” and try again once the image has loaded.';
+
+  const openMainSearch = () => {
+    setActiveTab('explorer');
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      searchInputRef.current?.focus({ preventScroll: true });
+    });
+  };
 
   const client = useMemo(() => new OrbitApiClient(), []);
 
@@ -352,6 +363,7 @@ export function App() {
         healthError={healthError}
         selectedTarget={selectedTarget}
         onSelectTab={setActiveTab}
+        onOpenSearch={openMainSearch}
       />
 
       <main id="main-workspace" className="flex-1 w-full max-w-[1400px] mx-auto p-4 lg:p-6">
@@ -363,9 +375,17 @@ export function App() {
             onQueryChange={(q) => setSearchParams((prev) => ({ ...prev, q }))}
             onPickExample={(name) => {
               const next = pickExample(searchParams, name);
-              setSearchParams(next.params);
+              setSearchParams({ ...next.params, discoveryMethod: 'ALL', requireRadius: false, requireMass: false });
               setSelectedId(next.selectedId);
             }}
+            discoveryMethod={searchParams.discoveryMethod ?? 'ALL'}
+            onDiscoveryMethodChange={(method) =>
+              setSearchParams((prev) => ({ ...prev, discoveryMethod: method }))
+            }
+            snapshot={discoverySnapshot}
+            liveItems={searchItems}
+            loading={searchLoading || snapshotState.phase === 'loading'}
+            error={searchError}
           />
           <FindAWorld
             target={selectedTarget}
