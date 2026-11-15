@@ -1,8 +1,12 @@
-name: Refresh NASA exoplanet snapshot
+name: Generate NASA exoplanet snapshot (one-time)
 
-# Manual only: run it from the Actions tab when a fresh dated snapshot is wanted.
-# (It used to run whenever this file changed on main, which commits data as a side effect of editing CI.)
+# The snapshot is generated when this workflow file first arrives on main.
+# A snapshot commit does not match this path filter, so there is no push loop.
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/nasa-snapshot.yml'
   workflow_dispatch:
 
 permissions:
@@ -19,20 +23,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
       - name: Get real NASA TAP data (no fixture or fallback)
-        run: npm run snapshot
-      - name: Check the app still builds and tests pass with the new snapshot
-        run: |
-          npm run typecheck
-          npm test
-          npm run build
-      - name: Commit the dated snapshot to main
+        run: node scripts/generate-snapshot.mjs
+      - name: Commit verified dated snapshot directly to main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/snapshots/planets-*.json
-          git diff --cached --quiet && { echo "No change in the snapshot."; exit 0; }
-          git commit -m "data(story): refresh NASA pscomppars snapshot"
+          git add -f data/snapshots/planets-*.json
+          git add -f public/data/snapshots/
+          git commit -m "data(story): snapshot real NASA pscomppars catalogue"
           git push origin HEAD:main

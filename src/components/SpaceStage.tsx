@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Image as ImageIcon, Orbit } from 'lucide-react';
 
 export type StageView = 'sky' | 'system';
@@ -8,15 +8,10 @@ interface SpaceStageProps {
   sky: ReactNode;
   /** 3D system view. Mounted only while selected, so its WebGL context is released when not in use. */
   system: ReactNode;
-  /** Incremented by the page to bring the sky view back to the front (e.g. "Explore its sky"). */
-  showSkyRequest?: number;
 }
 
-export const SpaceStage: React.FC<SpaceStageProps> = ({ sky, system, showSkyRequest = 0 }) => {
+export const SpaceStage: React.FC<SpaceStageProps> = ({ sky, system }) => {
   const [view, setView] = useState<StageView>('sky');
-  useEffect(() => {
-    if (showSkyRequest > 0) setView('sky');
-  }, [showSkyRequest]);
 
   const tabClass = (active: boolean) =>
     `inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
@@ -24,7 +19,7 @@ export const SpaceStage: React.FC<SpaceStageProps> = ({ sky, system, showSkyRequ
     }`;
 
   return (
-    <section id="space-stage" aria-label="Explore the planet" className="bg-[#161e2c] border border-slate-800 rounded">
+    <section aria-label="Explore the planet" className="bg-[#161e2c] border border-slate-800 rounded">
       <div role="tablist" aria-label="Choose a view" className="flex items-center gap-1 px-3 border-b border-slate-800 bg-[#1a2332]">
         <button
           type="button"

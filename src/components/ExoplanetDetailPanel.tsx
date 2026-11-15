@@ -9,7 +9,6 @@ import {
 import { formatDecDms, formatDeg, formatRaHms } from '../utils/coordinates';
 import { formatMeasurementValue, friendlyUnit } from '../utils/measurementFormat';
 import { snapshotOf } from '../utils/snapshot';
-import { LIGHT_YEARS_PER_PARSEC } from '../stories/planetSnapshot';
 
 interface ExoplanetDetailPanelProps {
   mode: DataSourceMode;
@@ -468,7 +467,7 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
           <p className="text-xs text-slate-400">
             Orbits the star <span className="text-slate-200">{target.hostStar.hostname}</span>
             {target.hostStar.distancePc.value !== null &&
-              ` · ${Math.round(target.hostStar.distancePc.value * LIGHT_YEARS_PER_PARSEC).toLocaleString('en-US')} light-years away`}
+              ` · ${Math.round(target.hostStar.distancePc.value * 3.2616).toLocaleString('en-US')} light-years away`}
             {target.discoveryMethod !== 'Not recorded' && ` · found by ${target.discoveryMethod.toLowerCase()}`}
             {target.discoveryYear ? ` in ${target.discoveryYear}` : ''}
           </p>
