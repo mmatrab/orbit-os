@@ -413,6 +413,12 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     return () => { cancel(); tourCancelRef.current = () => {}; };
   }, [tourVisible, libReady, phase, target?.id, tourKey, ra, dec, stopTourAnimation]);
 
+  // If the visitor scrolls away or survey imagery becomes unavailable, finish at
+  // the target instead of leaving a partially zoomed camera behind.
+  useEffect(() => {
+    if (tourState === 'playing' && (!tourVisible || phase !== 'ok')) stopTour();
+  }, [tourVisible, tourState, phase, stopTour]);
+
   // Direct user interaction always wins: dragging, zooming or using the keyboard
   // cancels the guided journey instead of fighting over the Aladin camera.
   useEffect(() => {
@@ -754,9 +760,9 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
           <button
             type="button"
             onClick={() => void exportPng()}
-            disabled={!target || phase !== 'ok' || exporting}
+            disabled={!target || phase !== 'ok' || exporting || tourState === 'playing'}
             className="sky-btn"
-            title={phase === 'ok' ? 'Save the current view with its details printed underneath' : 'Available once sky images have loaded'}
+            title={tourState === 'playing' ? 'Available when the guided sky tour finishes or is skipped' : phase === 'ok' ? 'Save the current view with its details printed underneath' : 'Available once sky images have loaded'}
           >
             <ImageIcon className="w-3.5 h-3.5" aria-hidden="true" />
             {exporting ? 'Capturing…' : 'Export sky image (PNG)'}
