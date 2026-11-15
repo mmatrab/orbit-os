@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { AladinCatalog, AladinInstance, AladinLiteModule } from 'aladin-lite';
-import { Crosshair, Download, ExternalLink, Maximize2, RotateCw, Image as ImageIcon, Play, SkipForward } from 'lucide-react';
+import { Crosshair, Download, ExternalLink, Maximize2, RotateCw, Image as ImageIcon, Play, Pause, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ExoplanetDetail } from '../api/contracts';
 import { formatDecDms, formatDeg, formatRaHms } from '../utils/coordinates';
 import {
@@ -20,6 +20,7 @@ import {
 } from '../sky/skySnapshot';
 import { triggerTextDownload } from '../utils/exportBundle';
 import { TOUR_DURATION_MS, TOUR_END_FOV_DEG, tourCameraAt, tourStartCamera } from '../sky/guidedTour';
+import { storyStepsForDec } from '../sky/surveyStory';
 
 // Aladin Lite (LGPL-3.0) is loaded on demand as its own unmodified chunk: smaller initial
 // bundle, and the library stays separable from the application code.
@@ -31,6 +32,10 @@ function loadAladin(): Promise<AladinLiteModule> {
 
 /** How long to wait for the first image tile before telling the user something is wrong. */
 const TILE_WATCHDOG_MS = 15000;
+
+function hasValidCoordinates(ra: number | null, dec: number | null): boolean {
+  return ra !== null && dec !== null && Number.isFinite(ra) && Number.isFinite(dec);
+}
 
 const ZOOM_PRESETS: { deg: number; label: string; hint: string }[] = [
   { deg: 0.05, label: 'Close', hint: '3 arcminutes across — the star and its nearest neighbours' },
@@ -99,6 +104,10 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const [tourVisible, setTourVisible] = useState(false);
   const [tourState, setTourState] = useState<'idle' | 'playing' | 'finished' | 'skipped'>('idle');
   const [tourReplay, setTourReplay] = useState(0);
+  const [storyIndex, setStoryIndex] = useState(0);
+  const [storyPaused, setStoryPaused] = useState(false);
+  const [storyDone, setStoryDone] = useState(false);
+  const [storyCountdown, setStoryCountdown] = useState(0);
 
   const [phase, setPhase] = useState<ViewerPhase>('starting');
   const [problem, setProblem] = useState<string | null>(null);
@@ -119,6 +128,9 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const ra = target?.hostStar.raDeg ?? null;
   const dec = target?.hostStar.decDeg ?? null;
   const tourKey = target ? `${target.id}:${ra}:${dec}:${tourReplay}` : null;
+  const storySteps = storyStepsForDec(dec);
+  const storyStep = storySteps[Math.min(storyIndex, storySteps.length - 1)];
+  const storyStarted = tourStartedRef.current === tourKey || storyIndex > 0;
 
   const stopTourAnimation = useCallback(() => {
     if (tourFrameRef.current !== null) {
@@ -137,7 +149,20 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
       setFovDeg(TOUR_END_FOV_DEG);
     }
     setTourState('skipped');
+    setStoryDone(true);
   }, [ra, dec, stopTourAnimation]);
+
+  // The selected planet begins a new lesson; it never inherits another planet's captions.
+  useEffect(() => {
+    tourCancelRef.current();
+    stopTourAnimation();
+    setStoryIndex(0);
+    setStoryPaused(false);
+    setStoryDone(false);
+    setStoryCountdown(0);
+    setTourState('idle');
+    tourStartedRef.current = null;
+  }, [target?.id, ra, dec, stopTourAnimation]);
 
   useEffect(() => {
     const element = frameRef.current;
@@ -370,6 +395,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
       }
       setFovDeg(TOUR_END_FOV_DEG);
       setTourState('finished');
+      setStoryIndex((current) => current === 0 ? 1 : current);
     };
     const cancel = () => {
       cancelled = true;
@@ -378,6 +404,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     tourCancelRef.current = cancel;
 
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      // Reduced motion: do not run a cinematic camera flight or a timed slideshow.
+      setStoryPaused(true);
       finish();
       return () => { cancel(); tourCancelRef.current = () => {}; };
     }
@@ -412,6 +440,118 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     }
     return () => { cancel(); tourCancelRef.current = () => {}; };
   }, [tourVisible, libReady, phase, target?.id, tourKey, ra, dec, stopTourAnimation]);
+
+  // Once the arrival flight has completed, continue with an automatically
+  // captioned, video-like lesson. A survey step holds until real HiPS imagery
+  // has loaded, so the captions never pretend that a failed survey is visible.
+  useEffect(() => {
+    if (!storyStarted || storyDone || storyPaused || !tourVisible ||
+        tourState !== 'finished' || !target || !hasValidCoordinates(ra, dec)) return;
+    if (!storyStep) return;
+
+    if (storyStep.surveyId && storyStep.surveyId !== surveyId) {
+      void changeSurvey(storyStep.surveyId);
+      return;
+    }
+    if (phase !== 'ok') return;
+
+    const endIndex = storySteps.length - 1;
+    const duration = storyStep.durationMs;
+    setStoryCountdown(duration);
+
+    if (storyStep.id === 'controls') {
+      try {
+        aladinRef.current?.gotoRaDec(ra!, dec!);
+        aladinRef.current?.setFoV(1);
+        setFovDeg(1);
+        setShowGrid(true);
+      } catch {
+        // Leave the lesson caption visible even if a WebGL transition fails.
+      }
+    }
+    const startedAt = Date.now();
+    const timer = window.setTimeout(() => {
+      setStoryCountdown(0);
+      if (storyIndex >= endIndex) {
+        setStoryDone(true);
+        setShowGrid(false);
+        try {
+          aladinRef.current?.gotoRaDec(ra!, dec!);
+          aladinRef.current?.setFoV(TOUR_END_FOV_DEG);
+          setFovDeg(TOUR_END_FOV_DEG);
+        } catch {
+          // Respect a viewer that has since been torn down.
+        }
+      } else setStoryIndex((index) => index + 1);
+    }, duration);
+    return () => {
+      window.clearTimeout(timer);
+      setStoryCountdown((current) =>
+        current > 0 ? Math.max(0, current - (Date.now() - startedAt)) : 0
+      );
+    };
+    // Switching image surveys is deliberately performed by the existing
+    // changeSurvey function, which handles mirrors and tile-load failures.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storyIndex, storyPaused, storyDone, tourVisible, tourState, phase, surveyId, tourKey]);
+
+  const replayStory = () => {
+    tourCancelRef.current();
+    stopTourAnimation();
+    setStoryIndex(0);
+    setStoryPaused(false);
+    setStoryDone(false);
+    setStoryCountdown(0);
+    setShowGrid(false);
+    setTourState('idle');
+    tourStartedRef.current = null;
+    if (surveyId !== DEFAULT_SURVEY_ID) void changeSurvey(DEFAULT_SURVEY_ID);
+    setTourReplay((value) => value + 1);
+  };
+
+  const nextStory = () => {
+    if (storyIndex === 0 && tourState === 'playing') {
+      tourCancelRef.current();
+      stopTourAnimation();
+      aladinRef.current?.gotoRaDec(ra!, dec!);
+      aladinRef.current?.setFoV(TOUR_END_FOV_DEG);
+      setTourState('finished');
+      setStoryIndex(1);
+      return;
+    }
+    if (storyIndex < storySteps.length - 1) {
+      setStoryIndex((index) => index + 1);
+      setStoryPaused(false);
+      setStoryCountdown(0);
+    } else {
+      setStoryDone(true);
+      setStoryPaused(false);
+      setShowGrid(false);
+    }
+  };
+
+  const pauseOrResumeStory = () => {
+    if (storyPaused) {
+      if (storyIndex === 0 && tourState !== 'finished') {
+        replayStory();
+      } else setStoryPaused(false);
+    } else {
+      setStoryPaused(true);
+      if (tourState === 'playing') {
+        tourCancelRef.current();
+        stopTourAnimation();
+        setTourState('idle');
+      }
+    }
+  };
+
+  const skipStory = () => {
+    stopTour();
+    setStoryDone(true);
+    setStoryPaused(false);
+    setStoryCountdown(0);
+    setShowGrid(false);
+  };
 
   // If the visitor scrolls away or survey imagery becomes unavailable, finish at
   // the target instead of leaving a partially zoomed camera behind.
@@ -452,13 +592,13 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   }, [projection, cooFrame, showGrid, libReady]);
 
   const applyZoom = (deg: number) => {
-    if (tourState === 'playing') stopTour(false);
+    if (!storyDone) skipStory();
     setFovDeg(deg);
     aladinRef.current?.setFoV(deg);
   };
 
   const handleRecenter = () => {
-    if (tourState === 'playing') stopTour(false);
+    if (!storyDone) skipStory();
     if (!aladinRef.current || ra === null || dec === null) return;
     aladinRef.current.gotoRaDec(ra, dec);
     aladinRef.current.setFoV(fovDeg);
@@ -591,7 +731,10 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
             <span className="text-[11px] text-slate-400">Image survey</span>
             <select
               value={surveyId}
-              onChange={(e) => void changeSurvey(e.target.value)}
+              onChange={(e) => {
+                skipStory();
+                void changeSurvey(e.target.value);
+              }}
               className="px-2 py-1.5 text-xs bg-[#0e1420] border border-slate-700 rounded text-slate-100 focus:border-cyan-400 focus:outline-none"
             >
               {HIPS_SURVEYS.map((s) => (
@@ -652,38 +795,96 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
           </div>
         </div>
         <p className="text-[11px] text-slate-500 -mt-1">{survey.description}</p>
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cyan-700/40 bg-[#10283b]/70 p-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-cyan-100" aria-live="polite">
-              {phase !== 'ok' ? 'Preparing the real sky image…' :
-                !hasCoords ? 'Position not available in the archive' :
-                tourState === 'playing' ? `Flying toward ${target?.hostStar.hostname ?? 'the host star'}…` :
-                tourState === 'finished' ? `Arrived at ${target?.hostStar.hostname ?? 'the host star'}` :
-                tourState === 'skipped' ? 'Guided tour skipped — explore the sky freely' :
-                'Your guided sky tour starts automatically when this image is visible.'}
-            </p>
-            <p className="mt-1 text-xs leading-5 text-slate-300">
-              A silent camera journey through actual telescope survey images.
-              The circle identifies the host star, not a photograph of the exoplanet.
-            </p>
+        <div className="rounded-lg border border-cyan-700/50 bg-[#10283b]/90 p-3 sm:p-4" aria-label="Guided sky explanation">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-cyan-300">
+              Guided sky video · {Math.min(storyIndex+1,storySteps.length)} / {storySteps.length}
+            </span>
+            <span className="text-xs text-slate-300" aria-live="polite">
+              {storyDone ? 'Tour complete' : storyPaused ? 'Paused' :
+                phase !== 'ok' ? 'Waiting for real sky images…' :
+                storyIndex === 0 && tourState !== 'finished' && !storyStarted ? 'Starts when you scroll here' :
+                'Playing'}
+            </span>
           </div>
-          {hasCoords && (
-            <div className="flex shrink-0 flex-wrap gap-2">
-              {tourState === 'playing' ? (
-                <button type="button" className="sky-btn" onClick={() => stopTour()}>
-                  <SkipForward className="h-3.5 w-3.5" aria-hidden="true" /> Skip
-                </button>
-              ) : (
-                <button type="button" className="sky-btn" disabled={!libReady || phase !== 'ok'}
-                  onClick={() => { stopTourAnimation(); tourStartedRef.current = null; setTourReplay((v) => v + 1); }}>
-                  <Play className="h-3.5 w-3.5" aria-hidden="true" /> Replay tour
-                </button>
+          <div className="mt-2 flex gap-1" role="group" aria-label="Lesson chapters">
+            {storySteps.map((step, index) => (
+              <button
+                key={step.id}
+                type="button"
+                title={step.label}
+                aria-label={`Go to chapter ${index + 1}: ${step.label}`}
+                aria-current={storyIndex === index ? 'step' : undefined}
+                onClick={() => {
+                  if (index === 0) replayStory();
+                  else {
+                    if (tourState === 'playing') {
+                      tourCancelRef.current();
+                      stopTourAnimation();
+                      setTourState('finished');
+                    }
+                    setStoryIndex(index);
+                    setStoryPaused(true);
+                    setStoryDone(false);
+                  }
+                }}
+                className={`h-2 flex-1 rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-cyan-400 ${
+                  storyIndex === index ? 'bg-cyan-300' : index < storyIndex ? 'bg-cyan-800' : 'bg-slate-600'
+                }`}
+              />
+            ))}
+          </div>
+          <h3 className="mt-3 text-base font-semibold text-slate-50" aria-live="polite">
+            {storyDone ? 'Explore the sky on your own' : storyStep?.title}
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-slate-100">
+            {storyDone
+              ? 'You have seen the same region in several wavelengths. Choose a survey or zoom level to keep exploring.'
+              : storyStep?.explanation}
+          </p>
+          {!storyDone && (
+            <p className="mt-1.5 text-xs font-medium text-cyan-200">
+              Why it helps: {storyStep?.benefit}
+              {storyStep?.sourceUrl && (
+                <> · <a className="underline underline-offset-2" href={storyStep.sourceUrl}
+                  target="_blank" rel="noopener noreferrer">Scientific source</a></>
               )}
-            </div>
+            </p>
           )}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {!storyDone && (
+              <>
+                <button type="button" className="sky-btn" onClick={pauseOrResumeStory}>
+                  {storyPaused ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> :
+                    <Pause className="h-3.5 w-3.5" aria-hidden="true" />}
+                  {storyPaused ? 'Resume' : 'Pause'}
+                </button>
+                <button type="button" className="sky-btn" onClick={() => {
+                  if (storyIndex > 0) { setStoryPaused(true); setStoryIndex((i) => i - 1); }
+                }} disabled={storyIndex === 0}>
+                  <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" /> Previous
+                </button>
+                <button type="button" className="sky-btn" onClick={nextStory}>
+                  Next <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+                <button type="button" className="sky-btn" onClick={skipStory}>
+                  <SkipForward className="h-3.5 w-3.5" aria-hidden="true" /> Skip lesson
+                </button>
+              </>
+            )}
+            <button type="button" className="sky-btn ml-auto" onClick={replayStory}
+              disabled={!libReady || phase === 'failed'}>
+              <Play className="h-3.5 w-3.5" aria-hidden="true" />
+              {storyDone ? 'Watch again' : 'Restart'}
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">
+            Silent, interactive walkthrough of real sky surveys — not an artificial video.
+            Infrared colours are representations of wavelengths outside human vision.
+          </p>
         </div>
 
-        <div ref={frameRef} className="sky-frame relative rounded border border-slate-800 overflow-hidden bg-[#0a0f18]">
+                <div ref={frameRef} className="sky-frame relative rounded border border-slate-800 overflow-hidden bg-[#0a0f18]">
           <div
             ref={hostRef}
             className="aladin-viewport-host cursor-crosshair"
