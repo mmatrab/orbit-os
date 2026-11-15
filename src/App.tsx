@@ -21,6 +21,7 @@ import { ResearchNotebookPanel } from './components/ResearchNotebookPanel';
 import { SkyViewerPanel } from './components/SkyViewerPanel';
 import { SpaceStage } from './components/SpaceStage';
 import { FindAWorld } from './components/FindAWorld';
+import { StoryCharts } from './components/StoryCharts';
 import { SystemViewer3D } from './components/SystemViewer3D';
 import { TargetSearchPanel } from './components/TargetSearchPanel';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
@@ -392,6 +393,8 @@ export function App() {
               />
             </div>
           </div>
+
+          <StoryCharts />
 
           {planetTab === 'data' && (
             <div className="mt-4">
