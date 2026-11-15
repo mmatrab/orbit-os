@@ -106,18 +106,24 @@ export function CatalogBrowser({
           <div role="group" aria-label="Discovery categories" className="mt-3 flex flex-wrap gap-2">
             {CATEGORIES.map((item) => (
               <button key={item.key} type="button"
+                disabled={!snapshot && item.key !== 'nearby'}
+                title={!snapshot && item.key !== 'nearby' ? 'Available after the dated NASA snapshot loads' : undefined}
                 aria-pressed={category === item.key}
                 onClick={() => { setCategory(item.key); setVisible(INITIAL_VISIBLE); }}
                 className={`rounded-full border px-3 py-2 text-xs font-medium cursor-pointer focus-visible:outline-2 focus-visible:outline-cyan-400 ${
                   category === item.key
                     ? 'border-cyan-400 bg-cyan-400/10 text-cyan-100'
                     : 'border-slate-600 text-slate-300 hover:border-cyan-500 hover:text-slate-100'
+                } ${!snapshot && item.key !== 'nearby' ? 'opacity-45 cursor-not-allowed' : ''}
                 }`}>
                 {item.label}
               </button>
             ))}
           </div>
-          <p className="mt-2 text-xs leading-5 text-slate-400">{categoryInfo.description}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            {snapshot ? categoryInfo.description :
+              'Showing the current live NASA results. Additional categories become available once the dated archive snapshot loads.'}
+          </p>
 
           {picks.length > 0 ? (
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2" aria-label="Planet suggestions">
