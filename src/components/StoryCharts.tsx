@@ -126,6 +126,9 @@ function Timeline({ snapshot }: { snapshot: PlanetSnapshot }) {
 function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
   const { plotted, excluded } = useMemo(() => filterLoggable(snapshot.planets), [snapshot]);
   const [table, setTable] = useState(false);
+  const [tablePage, setTablePage] = useState(0);
+  const pageSize = 150;
+  const tablePages = Math.max(1, Math.ceil(plotted.length / pageSize));
   const [shown, setShown] = useState<DiscoveryCategory[]>([...DISCOVERY_METHODS]);
   const valid = plotted.filter((p) => shown.includes(
     (DISCOVERY_METHODS as readonly string[]).includes(p.discoveryMethod)
@@ -167,10 +170,15 @@ function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
       {table ? (
         <div className="mt-3 max-h-[350px] overflow-auto">
           <table className="w-full text-xs text-left">
-            <caption className="text-left pb-2">First 150 plot-eligible planets in snapshot order. {plotted.length} are eligible in total.</caption>
+            <caption className="text-left pb-2">Plot-eligible planets in snapshot order, page {tablePage + 1} of {tablePages}. {plotted.length} eligible in total.</caption>
             <thead><tr>{['Planet', 'Host star', 'Discovery method', 'Radius (Earth)', 'Period (days)'].map((m) => <th key={m} scope="col" className="p-2">{m}</th>)}</tr></thead>
-            <tbody>{plotted.slice(0, 150).map((p) => <tr className="border-t border-slate-700" key={p.planetName}><th scope="row" className="p-2">{p.planetName}</th><td className="p-2">{p.hostname}</td><td className="p-2">{p.discoveryMethod}</td><td className="p-2">{p.radiusEarth}</td><td className="p-2">{p.orbitalPeriodDays}</td></tr>)}</tbody>
+            <tbody>{plotted.slice(tablePage * pageSize, (tablePage + 1) * pageSize).map((p) => <tr className="border-t border-slate-700" key={p.planetName}><th scope="row" className="p-2">{p.planetName}</th><td className="p-2">{p.hostname}</td><td className="p-2">{p.discoveryMethod}</td><td className="p-2">{p.radiusEarth}</td><td className="p-2">{p.orbitalPeriodDays}</td></tr>)}</tbody>
           </table>
+          <div className="mt-2 flex items-center gap-3 text-xs">
+            <button type="button" className="sky-btn" disabled={tablePage === 0} onClick={() => setTablePage((p) => Math.max(0, p - 1))}>Previous page</button>
+            <span aria-live="polite">Page {tablePage + 1} / {tablePages}</span>
+            <button type="button" className="sky-btn" disabled={tablePage >= tablePages - 1} onClick={() => setTablePage((p) => Math.min(tablePages - 1, p + 1))}>Next page</button>
+          </div>
         </div>
       ) : (
         <div className="mt-3 overflow-x-auto">
