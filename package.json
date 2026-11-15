@@ -12,7 +12,7 @@
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
     "clean": "rm -rf dist",
-    "snapshot": "node scripts/generate-snapshot.mjs"
+    "snapshot": "tsx scripts/build-planet-snapshot.ts"
   },
   "dependencies": {
     "express": "^4.21.2",

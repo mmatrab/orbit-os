@@ -7,6 +7,7 @@ import {
   type DiscoveryCategory,
   type PlanetSnapshot,
 } from '../utils/storyCharts';
+import { loadLatestSnapshot } from '../stories/loadSnapshot';
 
 const COLOURS: Record<DiscoveryCategory, string> = {
   Transit: '#56B4E9',
@@ -229,16 +230,39 @@ export function StoryCharts() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let cancelled = false;
-    const url = new URL('data/snapshots/latest.json', document.baseURI);
-    fetch(url).then(async (res) => {
-      if (!res.ok) throw new Error('NASA snapshot is not installed on this deployment.');
-      const value: unknown = await res.json();
-      if (!verifySnapshot(value)) throw new Error('NASA snapshot did not pass validation.');
-      if (!cancelled) setSnapshot(value);
-    }).catch((e: unknown) => {
-      if (!cancelled) setError(e instanceof Error ? e.message : 'Cannot load NASA snapshot.');
-    }).finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    loadLatestSnapshot()
+      .then((snap) => {
+        // Adapter to this component's shape; the snapshot keeps the archive's limit marking as status "l".
+        const value: PlanetSnapshot = {
+          schemaVersion: 'orbit-os.planets-snapshot.v1',
+          retrievedAtUtc: snap.retrievedAtUtc,
+          source: snap.sourceName,
+          table: snap.table,
+          query: snap.query,
+          totalCount: snap.planets.length,
+          planets: snap.planets.map((p) => ({
+            planetName: p.planetName,
+            hostname: p.hostname ?? '',
+            discoveryMethod: p.discoveryMethod ?? 'Other',
+            discoveryYear: p.discoveryYear,
+            orbitalPeriodDays: p.orbitalPeriodDays,
+            radiusEarth: p.radiusEarth,
+            radiusLimitFlag: p.radiusStatus === 'l' ? 1 : 0,
+            periodLimitFlag: p.orbitalPeriodStatus === 'l' ? 1 : 0,
+          })),
+        };
+        if (!verifySnapshot(value)) throw new Error('NASA snapshot did not pass validation.');
+        if (!cancelled) setSnapshot(value);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Cannot load NASA snapshot.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
