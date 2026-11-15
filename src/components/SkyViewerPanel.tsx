@@ -129,7 +129,7 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const tourKey = target ? `${target.id}:${ra}:${dec}:${tourReplay}` : null;
   const storySteps = storyStepsForDec(dec);
   const storyStep = storySteps[Math.min(storyIndex, storySteps.length - 1)];
-  const storyStarted = tourStartedRef.current === tourKey || storyIndex > 0;
+  const storyStarted = Boolean(tourKey && tourStartedRef.current === tourKey) || storyIndex > 0;
 
   const stopTourAnimation = useCallback(() => {
     if (tourFrameRef.current !== null) {
