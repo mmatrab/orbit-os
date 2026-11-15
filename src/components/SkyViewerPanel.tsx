@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { AladinCatalog, AladinInstance, AladinLiteModule } from 'aladin-lite';
-import { Crosshair, Download, ExternalLink, Maximize2, RotateCw, Image as ImageIcon } from 'lucide-react';
+import { Crosshair, Download, ExternalLink, Maximize2, RotateCw, Image as ImageIcon, Play, SkipForward } from 'lucide-react';
 import { ExoplanetDetail } from '../api/contracts';
 import { formatDecDms, formatDeg, formatRaHms } from '../utils/coordinates';
 import {
@@ -19,6 +19,7 @@ import {
   skyFooterLines,
 } from '../sky/skySnapshot';
 import { triggerTextDownload } from '../utils/exportBundle';
+import { TOUR_DURATION_MS, TOUR_END_FOV_DEG, tourCameraAt, tourStartCamera } from '../sky/guidedTour';
 
 // Aladin Lite (LGPL-3.0) is loaded on demand as its own unmodified chunk: smaller initial
 // bundle, and the library stays separable from the application code.
@@ -92,6 +93,12 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const stopWatchRef = useRef<() => void>(() => {});
   const watchdogRef = useRef<number | undefined>(undefined);
   const surveyRequestRef = useRef(0);
+  const tourFrameRef = useRef<number | null>(null);
+  const tourStartedRef = useRef<string | null>(null);
+  const tourCancelRef = useRef<() => void>(() => {});
+  const [tourVisible, setTourVisible] = useState(false);
+  const [tourState, setTourState] = useState<'idle' | 'playing' | 'finished' | 'skipped'>('idle');
+  const [tourReplay, setTourReplay] = useState(0);
 
   const [phase, setPhase] = useState<ViewerPhase>('starting');
   const [problem, setProblem] = useState<string | null>(null);
@@ -111,6 +118,39 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const survey = findSurvey(surveyId);
   const ra = target?.hostStar.raDeg ?? null;
   const dec = target?.hostStar.decDeg ?? null;
+  const tourKey = target ? `${target.id}:${ra}:${dec}:${tourReplay}` : null;
+
+  const stopTourAnimation = useCallback(() => {
+    if (tourFrameRef.current !== null) {
+      window.cancelAnimationFrame(tourFrameRef.current);
+      tourFrameRef.current = null;
+    }
+  }, []);
+
+  const stopTour = useCallback((restoreFocus = true) => {
+    tourCancelRef.current();
+    stopTourAnimation();
+    const aladin = aladinRef.current;
+    if (restoreFocus && aladin && ra !== null && dec !== null) {
+      aladin.gotoRaDec(ra, dec);
+      aladin.setFoV(TOUR_END_FOV_DEG);
+      setFovDeg(TOUR_END_FOV_DEG);
+    }
+    setTourState('skipped');
+  }, [ra, dec, stopTourAnimation]);
+
+  useEffect(() => {
+    const element = frameRef.current;
+    if (!element || typeof IntersectionObserver === 'undefined') {
+      setTourVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      setTourVisible(entry.isIntersecting && entry.intersectionRatio >= 0.15);
+    }, { threshold: [0, 0.15, 0.5] });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const clearWatch = () => {
     stopWatchRef.current();
@@ -244,6 +284,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
 
     return () => {
       cancelled = true;
+      tourCancelRef.current();
+      stopTourAnimation();
       window.removeEventListener('unhandledrejection', onRejection);
       clearWatch();
       aladinRef.current = null;
@@ -305,7 +347,91 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
     }
   }, [target, ra, dec, libReady]);
 
-  // 4. Grid, frame and projection.
+  // 4. Automatically show the visitor a short, silent camera journey when this
+  // real sky canvas becomes visible. Never animate a blank/stalled survey.
+  useEffect(() => {
+    if (!tourVisible || !libReady || phase !== 'ok' || !target || !tourKey ||
+        ra === null || dec === null) return;
+    if (tourStartedRef.current === tourKey) return;
+    tourStartedRef.current = tourKey;
+
+    const aladin = aladinRef.current;
+    if (!aladin) return;
+    let cancelled = false;
+    let lastFrame = -Infinity;
+    const finish = () => {
+      if (cancelled) return;
+      stopTourAnimation();
+      try {
+        aladin.gotoRaDec(ra, dec);
+        aladin.setFoV(TOUR_END_FOV_DEG);
+      } catch {
+        // A transient WebGL teardown may occur during unmount.
+      }
+      setFovDeg(TOUR_END_FOV_DEG);
+      setTourState('finished');
+    };
+    const cancel = () => {
+      cancelled = true;
+      stopTourAnimation();
+    };
+    tourCancelRef.current = cancel;
+
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      finish();
+      return () => { cancel(); tourCancelRef.current = () => {}; };
+    }
+
+    try {
+      const start = tourStartCamera(ra, dec);
+      aladin.gotoRaDec(start.raDeg, start.decDeg);
+      aladin.setFoV(start.fovDeg);
+      setFovDeg(start.fovDeg);
+      setTourState('playing');
+      const begun = performance.now();
+      const animate = (now: number) => {
+        if (cancelled) return;
+        const fraction = Math.min(1, (now - begun) / TOUR_DURATION_MS);
+        if (now - lastFrame >= 48 || fraction >= 1) {
+          const camera = tourCameraAt(start, ra, dec, fraction);
+          try {
+            aladin.gotoRaDec(camera.raDeg, camera.decDeg);
+            aladin.setFoV(camera.fovDeg);
+            lastFrame = now;
+          } catch {
+            finish();
+            return;
+          }
+        }
+        if (fraction < 1) tourFrameRef.current = window.requestAnimationFrame(animate);
+        else finish();
+      };
+      tourFrameRef.current = window.requestAnimationFrame(animate);
+    } catch {
+      finish();
+    }
+    return () => { cancel(); tourCancelRef.current = () => {}; };
+  }, [tourVisible, libReady, phase, target?.id, tourKey, ra, dec, stopTourAnimation]);
+
+  // Direct user interaction always wins: dragging, zooming or using the keyboard
+  // cancels the guided journey instead of fighting over the Aladin camera.
+  useEffect(() => {
+    const element = hostRef.current;
+    if (!element) return;
+    const interrupt = () => {
+      if (tourFrameRef.current !== null) stopTour(false);
+    };
+    element.addEventListener('pointerdown', interrupt);
+    element.addEventListener('wheel', interrupt, { passive: true });
+    element.addEventListener('keydown', interrupt);
+    return () => {
+      element.removeEventListener('pointerdown', interrupt);
+      element.removeEventListener('wheel', interrupt);
+      element.removeEventListener('keydown', interrupt);
+    };
+  }, [stopTour]);
+
+  // 5. Grid, frame and projection.
   useEffect(() => {
     const aladin = aladinRef.current;
     if (!aladin || !libReady) return;
@@ -320,11 +446,13 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   }, [projection, cooFrame, showGrid, libReady]);
 
   const applyZoom = (deg: number) => {
+    if (tourState === 'playing') stopTour(false);
     setFovDeg(deg);
     aladinRef.current?.setFoV(deg);
   };
 
   const handleRecenter = () => {
+    if (tourState === 'playing') stopTour(false);
     if (!aladinRef.current || ra === null || dec === null) return;
     aladinRef.current.gotoRaDec(ra, dec);
     aladinRef.current.setFoV(fovDeg);
@@ -518,6 +646,36 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
           </div>
         </div>
         <p className="text-[11px] text-slate-500 -mt-1">{survey.description}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cyan-700/40 bg-[#10283b]/70 p-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-cyan-100" aria-live="polite">
+              {phase !== 'ok' ? 'Preparing the real sky image…' :
+                !hasCoords ? 'Position not available in the archive' :
+                tourState === 'playing' ? `Flying toward ${target?.hostStar.hostname ?? 'the host star'}…` :
+                tourState === 'finished' ? `Arrived at ${target?.hostStar.hostname ?? 'the host star'}` :
+                tourState === 'skipped' ? 'Guided tour skipped — explore the sky freely' :
+                'Your guided sky tour starts automatically when this image is visible.'}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-300">
+              A silent camera journey through actual telescope survey images.
+              The circle identifies the host star, not a photograph of the exoplanet.
+            </p>
+          </div>
+          {hasCoords && (
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {tourState === 'playing' ? (
+                <button type="button" className="sky-btn" onClick={() => stopTour()}>
+                  <SkipForward className="h-3.5 w-3.5" aria-hidden="true" /> Skip
+                </button>
+              ) : (
+                <button type="button" className="sky-btn" disabled={!libReady || phase !== 'ok'}
+                  onClick={() => { stopTourAnimation(); tourStartedRef.current = null; setTourReplay((v) => v + 1); }}>
+                  <Play className="h-3.5 w-3.5" aria-hidden="true" /> Replay tour
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         <div ref={frameRef} className="sky-frame relative rounded border border-slate-800 overflow-hidden bg-[#0a0f18]">
           <div
