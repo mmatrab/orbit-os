@@ -23,7 +23,6 @@ import { SpaceStage } from './components/SpaceStage';
 import { FindAWorld } from './components/FindAWorld';
 import { StoryCharts } from './components/StoryCharts';
 import { SystemViewer3D } from './components/SystemViewer3D';
-import { TargetSearchPanel } from './components/TargetSearchPanel';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
 import { pickExample } from './utils/examplePick';
 import { useSnapshot } from './stories/useSnapshot';
@@ -88,7 +87,6 @@ export function App() {
     limit: 50,
   });
   const [searchItems, setSearchItems] = useState<ExoplanetSearchItem[]>([]);
-  const [searchTotal, setSearchTotal] = useState(0);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
@@ -171,13 +169,11 @@ export function App() {
       const res = await client.searchTargets(searchParams);
       if (requestNo !== latestSearchRequest.current) return;
       setSearchItems(res.items);
-      setSearchTotal(res.totalCount);
       // Keep the current target (e.g. one opened by deep link) even when it is not in this result page.
       setSelectedId((prevSelected) => prevSelected ?? res.items[0]?.id ?? null);
     } catch (err) {
       if (requestNo !== latestSearchRequest.current) return;
       setSearchItems([]);
-      setSearchTotal(0);
       setSearchError(err instanceof Error ? err.message : 'Failed to search catalog.');
     } finally {
       if (requestNo === latestSearchRequest.current) setSearchLoading(false);
@@ -372,6 +368,7 @@ export function App() {
               liveItems={searchItems}
               loading={searchLoading || snapshotState.phase === 'loading'}
               error={searchError}
+              selectedPlanetName={selectedId}
             />
             </div>
             <div className="relative z-10 min-w-0">
@@ -383,7 +380,7 @@ export function App() {
             </div>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] gap-4 items-start">
-            {/* Left: the picture of the star and planet, then the list of planets to pick from. */}
+            {/* Sky imagery and 3D system view. Planet discovery now lives beside the hero search. */}
             <div className="flex flex-col gap-4 min-w-0">
               <div id="sky-stage">
                 <SpaceStage
@@ -391,18 +388,7 @@ export function App() {
                   system={selectedTarget ? <SystemViewer3D target={selectedTarget} /> : null}
                 />
               </div>
-              <TargetSearchPanel
-                mode={mode}
-                params={searchParams}
-                items={searchItems}
-                totalCount={searchTotal}
-                selectedId={selectedId}
-                loading={searchLoading}
-                error={searchError}
-                onParamsChange={setSearchParams}
-                onSelectTarget={(id) => setSelectedId(id)}
-                onRetry={runSearch}
-              />
+
             </div>
 
             {/* Right: the numbers for the selected planet, kept in view while scrolling. */}
