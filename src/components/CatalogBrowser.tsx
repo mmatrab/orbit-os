@@ -5,12 +5,12 @@ import type { PlanetSnapshot } from '../stories/planetSnapshot';
 import { LIGHT_YEARS_PER_PARSEC, methodGroup } from '../stories/planetSnapshot';
 import { buildDiscoveryPicks, type DiscoveryPick } from '../utils/discoveryPicks';
 
-type BrowseCategory = 'nearby' | 'small' | 'systems' | 'recent';
+type BrowseCategory = 'nearby' | 'small' | 'systems' | 'all';
 const CATEGORIES: { key: BrowseCategory; label: string; description: string }[] = [
   { key: 'nearby', label: 'Nearby', description: 'Nearby confirmed exoplanets, one per host star.' },
   { key: 'small', label: 'Earth-sized', description: 'Planets with a reported measured radius of 0.8–1.25 Earth radii; this says nothing about habitability.' },
   { key: 'systems', label: 'Planet families', description: 'Stars hosting at least three confirmed planets.' },
-  { key: 'recent', label: 'Recent discoveries', description: 'Recently discovered planets in the archived snapshot, sorted by discovery year.' },
+  { key: 'all', label: 'All planets', description: 'Browse the full dated NASA catalogue alphabetically. Use search above to find a specific name.' },
 ];
 
 const INITIAL_VISIBLE = 6;
@@ -38,13 +38,12 @@ function browsePicks(snapshot: PlanetSnapshot | null, liveItems: readonly Exopla
   if (category === 'small') return buildDiscoveryPicks(planets, 'earth-size', 120);
   if (category === 'systems') return buildDiscoveryPicks(planets, 'families', 120);
   return [...planets]
-    .filter((p) => p.planetName && p.hostname && p.discoveryYear !== null && Number.isInteger(p.discoveryYear))
-    .sort((a, b) => (b.discoveryYear ?? 0) - (a.discoveryYear ?? 0) || a.planetName.localeCompare(b.planetName))
-    .slice(0, 120)
+    .filter((p) => p.planetName && p.hostname)
+    .sort((a, b) => a.planetName.localeCompare(b.planetName))
     .map((p) => ({
       planetName: p.planetName,
       title: p.planetName,
-      description: `Discovered ${p.discoveryYear} · ${methodGroup(p.discoveryMethod)}`,
+      description: `${methodGroup(p.discoveryMethod)} · ${p.hostname}`,
       distancePc: p.distancePc,
     }));
 }
