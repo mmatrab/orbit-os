@@ -107,6 +107,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const [storyIndex, setStoryIndex] = useState(0);
   const [storyPaused, setStoryPaused] = useState(false);
   const [storyDone, setStoryDone] = useState(false);
+  const [storyProgress, setStoryProgress] = useState(0);
+  const storyProgressRef = useRef(0);
 
   const [phase, setPhase] = useState<ViewerPhase>('starting');
   const [problem, setProblem] = useState<string | null>(null);
@@ -130,6 +132,12 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
   const storySteps = storyStepsForDec(dec);
   const storyStep = storySteps[Math.min(storyIndex, storySteps.length - 1)];
   const storyStarted = Boolean(tourKey && tourStartedRef.current === tourKey) || storyIndex > 0;
+  // A chapter always starts empty. Pausing or waiting for HiPS tiles preserves
+  // its fractional progress; only a chapter switch or restart resets it.
+  useEffect(() => {
+    storyProgressRef.current = 0;
+    setStoryProgress(0);
+  }, [storyIndex, target?.id, tourReplay]);
 
   const stopTourAnimation = useCallback(() => {
     if (tourFrameRef.current !== null) {
@@ -392,6 +400,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         // A transient WebGL teardown may occur during unmount.
       }
       setFovDeg(TOUR_END_FOV_DEG);
+      storyProgressRef.current = 1;
+      setStoryProgress(1);
       setTourState('finished');
       setStoryIndex((current) => current === 0 ? 1 : current);
     };
@@ -419,6 +429,8 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         if (cancelled) return;
         const fraction = Math.min(1, (now - begun) / TOUR_DURATION_MS);
         if (now - lastFrame >= 48 || fraction >= 1) {
+          storyProgressRef.current = fraction;
+          setStoryProgress(fraction);
           const camera = tourCameraAt(start, ra, dec, fraction);
           try {
             aladin.gotoRaDec(camera.raDeg, camera.decDeg);
@@ -466,8 +478,19 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         // Leave the lesson caption visible even if a WebGL transition fails.
       }
     }
-    const timer = window.setTimeout(() => {
-        if (storyIndex >= endIndex) {
+    let frameId = 0;
+    let lastFrame: number | null = null;
+    const step = (now: number) => {
+      if (lastFrame === null) lastFrame = now;
+      // Time spent in another browser tab does not silently skip chapters.
+      const elapsed = Math.min(100, Math.max(0, now - lastFrame));
+      lastFrame = now;
+      const fraction = Math.min(1, storyProgressRef.current + elapsed / duration);
+      storyProgressRef.current = fraction;
+      setStoryProgress(fraction);
+      if (fraction < 1) {
+        frameId = window.requestAnimationFrame(step);
+      } else if (storyIndex >= endIndex) {
         setStoryDone(true);
         setShowGrid(false);
         try {
@@ -477,9 +500,12 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
         } catch {
           // Respect a viewer that has since been torn down.
         }
-      } else setStoryIndex((index) => index + 1);
-    }, duration);
-    return () => window.clearTimeout(timer);
+      } else {
+        setStoryIndex((index) => index + 1);
+      }
+    };
+    frameId = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(frameId);
     // Switching image surveys is deliberately performed by the existing
     // changeSurvey function, which handles mirrors and tile-load failures.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -789,9 +815,10 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
             </span>
             <span className="text-xs text-slate-300" aria-live="polite">
               {storyDone ? 'Tour complete' : storyPaused ? 'Paused' :
+                phase === 'failed' || phase === 'stalled' ? 'Images unavailable · choose Next' :
                 phase !== 'ok' ? 'Waiting for real sky images…' :
                 storyIndex === 0 && tourState !== 'finished' && !storyStarted ? 'Starts when you scroll here' :
-                'Playing'}
+                `${Math.round(storyProgress * 100)}% · ${Math.max(0, Math.ceil((1-storyProgress) * (storyStep?.durationMs ?? 0)/1000))}s remaining`}
             </span>
           </div>
           <div className="mt-2 flex gap-1" role="group" aria-label="Lesson chapters">
@@ -815,10 +842,21 @@ export const SkyViewerPanel: React.FC<SkyViewerPanelProps> = ({ target }) => {
                     setStoryDone(false);
                   }
                 }}
-                className={`h-2 flex-1 rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-cyan-400 ${
-                  storyIndex === index ? 'bg-cyan-300' : index < storyIndex ? 'bg-cyan-800' : 'bg-slate-600'
-                }`}
-              />
+                className="relative h-2 flex-1 overflow-hidden rounded-full bg-slate-600 cursor-pointer focus-visible:outline-2 focus-visible:outline-cyan-400"
+              >
+                <span
+                  className={`absolute inset-y-0 left-0 rounded-full ${
+                    index === storyIndex ? 'bg-cyan-300' : 'bg-cyan-700'
+                  }`}
+                  style={{
+                    width: `${Math.round(100 * (
+                      storyDone && tourState !== 'skipped'
+                        ? 1
+                        : index < storyIndex ? 1 : index === storyIndex ? storyProgress : 0
+                    ))}%`,
+                  }}
+                />
+              </button>
             ))}
           </div>
           <h3 className="mt-3 text-base font-semibold text-slate-50" aria-live="polite">
