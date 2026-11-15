@@ -10,10 +10,13 @@ describe('Sky tour uses real survey sources and honest coverage', () => {
     expect(steps.find((s) => s.id === 'near-infrared')?.explanation).toMatch(/near-infrared/i);
     expect(steps.find((s) => s.id === 'mid-infrared')?.explanation).toMatch(/WISE/);
   });
-  it('never proposes Pan-STARRS outside its southern coverage', () => {
-    expect(storyStepsForDec(-31).some((s) => s.id === 'sharp-optical')).toBe(false);
-    expect(storyStepsForDec(null).some((s) => s.id === 'sharp-optical')).toBe(false);
-    expect(storyStepsForDec(-5).some((s) => s.id === 'sharp-optical')).toBe(true);
+  it('keeps Pan-STARRS out of the automatic lesson at every declination', () => {
+    for (const dec of [-40, -5, 45, null]) {
+      expect(storyStepsForDec(dec).some((step) => step.id === 'sharp-optical')).toBe(false);
+      expect(storyStepsForDec(dec).map((step) => step.id)).toEqual([
+        'arrival', 'visible', 'near-infrared', 'mid-infrared', 'controls',
+      ]);
+    }
   });
   it('keeps every explanatory chapter bounded and sourced', () => {
     for (const step of SURVEY_STORY) {
