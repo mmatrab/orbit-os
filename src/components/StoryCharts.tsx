@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { BookOpen, ArrowUpRight } from 'lucide-react';
+import { workspaceHref } from '../utils/workspaceNavigation';
 import {
   binDiscoveryYears,
   DISCOVERY_METHODS,
@@ -223,7 +225,7 @@ function RadiusPeriodChart({ snapshot }: { snapshot: PlanetSnapshot }) {
 }
 
 /** Charts only render when a real, dated NASA snapshot has been generated. */
-export function StoryCharts() {
+export function StoryCharts({ onLearnScience }: { onLearnScience: () => void }) {
   const [snapshot, setSnapshot] = useState<PlanetSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -243,7 +245,23 @@ export function StoryCharts() {
 
   return (
     <section className="mt-6 space-y-4" aria-labelledby="story-charts-heading">
-      <h2 id="story-charts-heading" className="text-xl font-semibold text-slate-50">Discoveries across the galaxy</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 id="story-charts-heading" className="text-xl font-semibold text-slate-50">
+            Discoveries across the galaxy
+          </h2>
+          <p className="mt-1 text-sm text-slate-300">
+            Curious why the bars peak in 2014 and 2016? Learn how astronomers detect planets.
+          </p>
+        </div>
+        <a href={workspaceHref(window.location.href, 'learn')}
+          onClick={(event) => { event.preventDefault(); onLearnScience(); }}
+          className="inline-flex items-center gap-2 rounded-lg border border-cyan-600 bg-cyan-950/30 px-4 py-2.5 text-sm font-semibold text-cyan-100 hover:border-cyan-300 hover:bg-cyan-900/40 focus-visible:outline-2 focus-visible:outline-cyan-400">
+          <BookOpen className="h-4 w-4" aria-hidden="true" />
+          Learn the science
+          <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+        </a>
+      </div>
       {loading ? <p className="text-sm text-slate-300" role="status">Loading the dated NASA snapshot…</p> : null}
       {error ? (
         <div role="status" className="rounded border border-amber-700 bg-amber-950/20 p-4 text-sm text-slate-200">
