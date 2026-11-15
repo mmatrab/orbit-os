@@ -19,6 +19,8 @@ import { IntroSearch } from './components/IntroSearch';
 import { ProvenancePanel } from './components/ProvenancePanel';
 import { ResearchNotebookPanel } from './components/ResearchNotebookPanel';
 import { SkyViewerPanel } from './components/SkyViewerPanel';
+import { SpaceStage } from './components/SpaceStage';
+import { SystemViewer3D } from './components/SystemViewer3D';
 import { TargetSearchPanel } from './components/TargetSearchPanel';
 import { BRIDGE_VERSION, onHostSelectTarget, postToHost, readLaunchOptions } from './embed/bridge';
 import { pickExample } from './utils/examplePick';
@@ -336,23 +338,29 @@ export function App() {
               setSelectedId(next.selectedId);
             }}
           />
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)] gap-4 items-start">
-            <div className="lg:sticky lg:top-4">
-            <TargetSearchPanel
-              mode={mode}
-              params={searchParams}
-              items={searchItems}
-              totalCount={searchTotal}
-              selectedId={selectedId}
-              loading={searchLoading}
-              error={searchError}
-              onParamsChange={setSearchParams}
-              onSelectTarget={(id) => setSelectedId(id)}
-              onRetry={runSearch}
-            />
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] gap-4 items-start">
+            {/* Left: the picture of the star and planet, then the list of planets to pick from. */}
+            <div className="flex flex-col gap-4 min-w-0">
+              <SpaceStage
+                sky={<SkyViewerPanel target={selectedTarget} />}
+                system={selectedTarget ? <SystemViewer3D target={selectedTarget} /> : null}
+              />
+              <TargetSearchPanel
+                mode={mode}
+                params={searchParams}
+                items={searchItems}
+                totalCount={searchTotal}
+                selectedId={selectedId}
+                loading={searchLoading}
+                error={searchError}
+                onParamsChange={setSearchParams}
+                onSelectTarget={(id) => setSelectedId(id)}
+                onRetry={runSearch}
+              />
             </div>
 
-            <div className="flex flex-col gap-4 min-w-0">
+            {/* Right: the numbers for the selected planet, kept in view while scrolling. */}
+            <div className="flex flex-col gap-4 min-w-0 xl:sticky xl:top-4">
               <ExoplanetDetailPanel
                 mode={mode}
                 target={selectedTarget}
@@ -364,30 +372,22 @@ export function App() {
                 planetTab={planetTab}
                 onPlanetTabChange={setPlanetTab}
               />
-
-              {/* Kept mounted while hidden so the sky renderer is not restarted on every tab switch. */}
-              <div
-                id="planet-panel-overview"
-                role="tabpanel"
-                aria-labelledby="planet-tab-overview"
-                hidden={planetTab !== 'overview'}
-              >
-                <SkyViewerPanel target={selectedTarget} />
-              </div>
-
-              {planetTab === 'data' && (
-                <ExoplanetDetailPanel
-                  view="advanced"
-                  mode={mode}
-                  target={selectedTarget}
-                  loading={detailLoading}
-                  error={detailError}
-                  onPinToNotebook={pinToNotebook}
-                  onRetry={loadSelectedTarget}
-                />
-              )}
             </div>
           </div>
+
+          {planetTab === 'data' && (
+            <div className="mt-4">
+              <ExoplanetDetailPanel
+                view="advanced"
+                mode={mode}
+                target={selectedTarget}
+                loading={detailLoading}
+                error={detailError}
+                onPinToNotebook={pinToNotebook}
+                onRetry={loadSelectedTarget}
+              />
+            </div>
+          )}
           </>
         )}
 

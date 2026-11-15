@@ -127,17 +127,17 @@ const KeyFact: React.FC<{ label: string; hint: string; measurement: ScientificMe
 }) => {
   const valueText = formatMeasurementValue(measurement);
   return (
-    <div className="p-3 rounded border border-slate-800 bg-[#0e1420]">
-      <div className="text-xs font-medium text-slate-300">{label}</div>
+    <div className="p-4 rounded border border-slate-700 bg-[#0e1420]">
+      <div className="text-sm font-semibold text-slate-100">{label}</div>
       {valueText === null ? (
-        <div className="mt-1 text-sm text-slate-500 italic">Not measured</div>
+        <div className="mt-1.5 text-base text-slate-300 italic">Not measured</div>
       ) : (
-        <div className="mt-1 font-mono tabular-nums text-slate-100">
-          <span className="text-lg font-semibold">{valueText}</span>{' '}
-          <span className="text-[11px] text-slate-400">{friendlyUnit(measurement.unit)}</span>
+        <div className="mt-1.5 font-mono tabular-nums text-slate-50">
+          <span className="text-3xl font-semibold">{valueText}</span>{' '}
+          <span className="text-sm text-slate-200">{friendlyUnit(measurement.unit)}</span>
           {measurement.status === 'derived' && (
             <span
-              className="ml-1 text-[10px] font-sans text-amber-300"
+              className="ml-2 text-xs font-sans text-amber-300"
               title="Calculated by the NASA Exoplanet Archive from other values, not measured directly."
             >
               (derived)
@@ -145,13 +145,13 @@ const KeyFact: React.FC<{ label: string; hint: string; measurement: ScientificMe
           )}
         </div>
       )}
-      <p className="mt-1 text-[11px] text-slate-400 leading-snug">{hint}</p>
+      <p className="mt-2 text-sm text-slate-200 leading-relaxed">{hint}</p>
       {measurement.status === 'derived' ? (
-        <div className="mt-1 text-[10px] text-amber-200/80">
+        <div className="mt-2 text-xs text-amber-200">
           Estimated by the archive from other values, not measured.
         </div>
       ) : measurement.referenceLabel ? (
-        <div className="mt-1 text-[10px] text-slate-500 truncate" title={measurement.referenceLabel}>
+        <div className="mt-2 text-xs text-slate-300 break-words" title={measurement.referenceLabel}>
           Source: {measurement.referenceLabel}
         </div>
       ) : null}
@@ -513,8 +513,8 @@ export const ExoplanetDetailPanel: React.FC<ExoplanetDetailPanelProps> = ({
       </div>
 
       {planetTab === 'overview' && (
-      <div className="p-4 flex flex-col gap-3 text-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="p-4 flex flex-col gap-3 text-sm">
+        <div className="grid grid-cols-1 gap-3">
           <KeyFact label="Radius" hint={PARAMETER_HINTS.radius} measurement={target.planetaryParameters.radiusEarth} />
           <KeyFact
             label={massLabel}
