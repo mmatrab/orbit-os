@@ -63,9 +63,9 @@ export function decodeDatedSnapshot(value: unknown): PlanetSnapshot {
       discoveryYear: finiteOrNull(row.discoveryYear),
       discoveryBibcode: null, // Not provided by this snapshot; never fabricate a paper reference.
       orbitalPeriodDays: finiteOrNull(row.orbitalPeriodDays),
-      orbitalPeriodStatus: row.periodLimitFlag !== null && row.periodLimitFlag !== 0 ? 'l' : null,
+      orbitalPeriodStatus: typeof row.periodLimitFlag === 'number' && row.periodLimitFlag !== 0 ? 'l' : null,
       radiusEarth: finiteOrNull(row.radiusEarth),
-      radiusStatus: row.radiusLimitFlag !== null && row.radiusLimitFlag !== 0 ? 'l' : null,
+      radiusStatus: typeof row.radiusLimitFlag === 'number' && row.radiusLimitFlag !== 0 ? 'l' : null,
       distancePc: finiteOrNull(row.distancePc),
       raDeg: finiteOrNull(row.raDeg),
       decDeg: finiteOrNull(row.decDeg),
