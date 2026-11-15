@@ -240,7 +240,7 @@ export function getTapStats(): { upstreamRequests: number; cacheHits: number; sh
 
 async function runTapQuery<T = Record<string, unknown>>(
   adql: string,
-  timeoutMs = 15000
+  timeoutMs = 22000
 ): Promise<T[]> {
   const cached = tapCache.get(adql);
   if (cached && cached.expiresAt > Date.now()) {
