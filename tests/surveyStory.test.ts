@@ -12,7 +12,7 @@ describe('Sky tour uses real survey sources and honest coverage', () => {
   });
   it('keeps Pan-STARRS out of the automatic lesson at every declination', () => {
     for (const dec of [-40, -5, 45, null]) {
-      expect(storyStepsForDec(dec).some((step) => step.id === 'sharp-optical')).toBe(false);
+      expect(storyStepsForDec(dec).map((step) => step.id)).not.toContain('sharp-optical');
       expect(storyStepsForDec(dec).map((step) => step.id)).toEqual([
         'arrival', 'visible', 'near-infrared', 'mid-infrared', 'controls',
       ]);
