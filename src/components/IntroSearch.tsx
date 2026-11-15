@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Compass, Search } from 'lucide-react';
+import { ChevronDown, Compass, Search, Shuffle } from 'lucide-react';
 import type { DiscoveryMethod, ExoplanetSearchItem } from '../api/contracts';
 import type { PlanetSnapshot } from '../stories/planetSnapshot';
 import { METHOD_ORDER, METHOD_PLAIN, LIGHT_YEARS_PER_PARSEC } from '../stories/planetSnapshot';
+import { buildDiscoveryPicks, type DiscoveryTheme } from '../utils/discoveryPicks';
 import {
   discoverySuggestions,
   liveResultSuggestions,
@@ -54,6 +55,12 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
   const [objectType, setObjectType] = useState<SearchObjectType>('planet');
   const [planetSize, setPlanetSize] = useState<PlanetSizeFilter>('all');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [ideasOpen, setIdeasOpen] = useState(true);
+  const [ideaTheme, setIdeaTheme] = useState<DiscoveryTheme>('nearby');
+  const picks = useMemo(
+    () => snapshot ? buildDiscoveryPicks(snapshot.planets, ideaTheme, 2) : [],
+    [snapshot, ideaTheme]
+  );
   const rootRef = useRef<HTMLDivElement>(null);
 
   const filters: DiscoveryFilters = { query, objectType, planetSize, discoveryMethod };
@@ -82,6 +89,18 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
     setOpen(false);
   };
 
+  const surpriseMe = () => {
+    if (!snapshot) return;
+    // Pick a real NASA planet with useful published values for the three-step tour.
+    const candidates = snapshot.planets.filter((p) =>
+      p.planetName && p.hostname && p.distancePc !== null && p.distancePc > 0 &&
+      p.radiusStatus === 'm' && p.radiusEarth !== null && p.radiusEarth > 0 &&
+      p.orbitalPeriodDays !== null && p.orbitalPeriodDays > 0 && p.orbitalPeriodStatus !== 'l'
+    );
+    if (candidates.length === 0) return;
+    choose(candidates[Math.floor(Math.random() * candidates.length)].planetName);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -99,7 +118,7 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
   };
 
   return (
-    <section className="mb-4 px-5 py-4 rounded border border-slate-800 bg-[#161e2c]" aria-labelledby="intro-title">
+    <section className="h-full px-5 py-4 rounded border border-slate-800 bg-[#161e2c] flex flex-col" aria-labelledby="intro-title">
       <h1 id="intro-title" className="text-xl sm:text-2xl font-semibold text-slate-50">
         Explore worlds beyond our Solar System
       </h1>
@@ -228,6 +247,91 @@ export const IntroSearch: React.FC<IntroSearchProps> = ({
           className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-cyan-700 text-cyan-200 hover:border-cyan-400 cursor-pointer">
           <Compass className="w-3.5 h-3.5" aria-hidden="true" /> Browse catalogue
         </button>
+      </div>
+
+      <div className="mt-5 border-t border-slate-700/80 pt-4">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-3 text-left cursor-pointer group"
+          aria-expanded={ideasOpen}
+          aria-controls="nasa-discovery-ideas"
+          onClick={() => setIdeasOpen((value) => !value)}
+        >
+          <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-100">
+            <Compass className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            NASA data-powered suggestions
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs text-cyan-300 group-hover:text-cyan-200">
+            {ideasOpen ? 'Collapse' : 'Expand'}
+            <ChevronDown className={`h-4 w-4 transition-transform ${ideasOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+          </span>
+        </button>
+
+        {ideasOpen && (
+          <div id="nasa-discovery-ideas" className="mt-3 space-y-3">
+            <p className="text-sm leading-5 text-slate-300">
+              Don’t know where to begin? Explore planets selected automatically from real NASA catalogue data.
+            </p>
+            <div role="group" aria-label="Explore by scientific category" className="flex flex-wrap gap-2">
+              {([
+                ['nearby', 'Closest to us'],
+                ['earth-size', 'Earth-sized by radius'],
+                ['families', 'Planet families'],
+              ] as [DiscoveryTheme, string][]).map(([theme, label]) => (
+                <button
+                  key={theme}
+                  type="button"
+                  aria-pressed={ideaTheme === theme}
+                  onClick={() => setIdeaTheme(theme)}
+                  className={`rounded-full border px-3 py-2 text-xs font-medium cursor-pointer focus-visible:outline-2 focus-visible:outline-cyan-400 ${
+                    ideaTheme === theme
+                      ? 'border-cyan-400 bg-cyan-400/10 text-cyan-100'
+                      : 'border-slate-600 text-slate-300 hover:border-cyan-500'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {snapshot ? (
+              picks.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-live="polite">
+                  {picks.map((pick) => (
+                    <button
+                      type="button"
+                      key={pick.planetName}
+                      onClick={() => choose(pick.planetName)}
+                      className="min-w-0 rounded-lg border border-slate-600 bg-[#101a2a] px-3 py-3 text-left hover:border-cyan-400 hover:bg-cyan-950/25 focus-visible:outline-2 focus-visible:outline-cyan-400 cursor-pointer"
+                    >
+                      <span className="block text-sm font-semibold text-slate-100 truncate">{pick.title}</span>
+                      <span className="mt-1 block text-xs leading-5 text-slate-300">{pick.description}</span>
+                      <span className="mt-1 block text-xs text-cyan-200">{LIGHT_YEAR(pick.distancePc) ?? 'Distance not reported'} · Explore →</span>
+                    </button>
+                  ))}
+                </div>
+              ) : <p className="text-sm text-slate-300">No catalogue matches for this category.</p>
+            ) : (
+              <p className="text-xs text-slate-300" role="status">
+                {loading ? 'Loading the dated NASA catalogue…' : 'Curated browsing needs the NASA catalogue snapshot. Use live search above.'}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] leading-4 text-slate-400">
+                Based on NASA Exoplanet Archive · pscomppars
+                {snapshot ? ` · ${snapshot.retrievedAtUtc.slice(0,10)}` : ''}.
+                Not official NASA recommendations or habitability rankings.
+              </p>
+              <button
+                type="button"
+                onClick={surpriseMe}
+                disabled={!snapshot}
+                className="inline-flex items-center gap-1.5 rounded border border-cyan-700 px-3 py-2 text-xs font-medium text-cyan-100 hover:border-cyan-400 disabled:opacity-40 cursor-pointer"
+              >
+                <Shuffle className="h-3.5 w-3.5" aria-hidden="true" /> Surprise me
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
