@@ -155,7 +155,8 @@ export const SystemViewer3D: React.FC<SystemViewer3DProps> = ({ target }) => {
 
       const applyLayout = (m: ScaleMode) => {
         orbitRadius = m === 'to-scale' ? geometry.orbitToScale : geometry.orbitClear;
-        const planetRadius = m === 'to-scale' ? Math.max(geometry.planetToScale, 0.02) : geometry.planetClear;
+        // To-scale mode must not silently enlarge small planets; the UI warns they may be sub-pixel.
+        const planetRadius = m === 'to-scale' ? geometry.planetToScale : geometry.planetClear;
         planet.scale.setScalar(planetRadius);
         if (orbitLine) {
           orbitPivot.remove(orbitLine);
